@@ -41,7 +41,7 @@
 #import "AudioOutputModel.h"
 #import "AudioOutputQueue.h"
 
-#define ENV @"staging-"
+#define ENV @""
 #define HTTP_SCHEMA @"https"
 #define WEBSOCKET_SCHEMA @"WSS"
 
