@@ -11,7 +11,7 @@
 #include <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import "SCSiriWaveformView.h"
-#define ws_url @"wss://staging-ivs.iflyos.cn/embedded/v1"
+#define ws_url @"wss://ivs.iflyos.cn/embedded/v1"
 #define k_NOTIFICATION_WS_STATE @"notificationWsState"//全局通知
 @interface ViewController ()<EvsSDKDelegate>
 @property (weak, nonatomic) IBOutlet UITextField *clientIdTextField;
