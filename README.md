@@ -6,7 +6,7 @@
 
   
 
-  - 下载[EVS SDK](https://github.com/packyzhou/EVS-SDK-OPENSOURCE)并附带iOS App应用事例
+  - 下载[EVS SDK](https://github.com/iFLYOS-OPEN/SDK-EVS-iOS)并附带iOS App应用事例
   - 在IFLYOS官网上了解[EVS协议](https://doc.iflyos.cn/device/evs/)，常见问题解答
   - 了解EVS SDK For iOS的使用方式
 
