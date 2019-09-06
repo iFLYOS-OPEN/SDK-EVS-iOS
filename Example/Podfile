@@ -3,7 +3,7 @@ workspace 'evs_sdk_ios.xcworkspace'
 inhibit_all_warnings!
 use_frameworks!
 source 'https://github.com/CocoaPods/Specs.git'
-source 'https://github.com/packyzhou/EVS-SDK-OPENSOURCE.git'
+source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
 
 target 'EvsSDKDemo' do
     project 'EvsSDKDemo/EvsSDKDemo.xcodeproj'
@@ -13,5 +13,5 @@ target 'EvsSDKDemo' do
     pod 'AFNetworking'
     pod 'WebViewJavascriptBridge'
     pod 'KeychainItemWrapper-Copy'
-    pod 'EVS-SDK-OPENSOURCE','~> 1.0.8'
+    pod 'SDK-EVS-iOS','~> 1.0.0'
 end
