@@ -63,6 +63,10 @@
     pod 'WebViewJavascriptBridge'
 
     
+    ```
+    libc++,libstdc++.6.0.9,libz
+    ```
+    
 
     ### 头文件引入
 
