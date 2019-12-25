@@ -35,7 +35,7 @@
 #import <SocketRocket/SocketRocket.h>
 #import <WebViewJavascriptBridge/WebViewJavascriptBridge.h>
 #import <fmdb/FMDB.h>
-#import "AVPlayerTouch.h"
+#import <AVPlayerTouch/AVPlayerTouch.h>
 
 #import "EVSHeaderProtocolModel.h"
 #import "EVSContextProtocolModel.h"
