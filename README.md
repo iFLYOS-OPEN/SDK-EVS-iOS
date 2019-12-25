@@ -145,6 +145,8 @@
 
 注意：
 
+> GitHub:https://github.com/imoreapps/ffmpeg-avplayer-for-ios-tvos.git(静态库请自行编译使用)
+>
 > 目前使用的是ffmpeg demo版本的lisence,如果要去掉水印，请根据协议替换视频播放器或使用授权的FFmpeg lisence。
 >
 > 设置lisence方法：[AVPLicense register:@"<ffmpeg lisence>"];
