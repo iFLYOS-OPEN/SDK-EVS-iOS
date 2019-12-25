@@ -19,6 +19,14 @@
 }
 @end
 
+@implementation EVSResponsePayloadProviderModel
+
+@end
+
+@implementation EVSResponsePayloadContentModel
+
+@end
+
 @implementation EVSResponsePayloadMetadataModel
 
 @end
@@ -37,6 +45,10 @@
     }
     return self;
 }
+
+-(void) setActions:(NSArray *)actions{
+    _actions = [EVSResponsePayloadAppActionModel mj_objectArrayWithKeyValuesArray:actions];
+}
 @end
 
 @implementation EVSResponseItemModel
@@ -44,6 +56,15 @@
 @end
 
 @implementation EVSResponseMetaModel
+
+@end
+
+
+@implementation EVSResponsePayloadAppActionDataModel
+
+@end
+
+@implementation EVSResponsePayloadAppActionModel 
 
 @end
 
@@ -56,5 +77,6 @@
 //}
 -(void) setIflyos_responses:(NSArray *)iflyos_responses {
     _iflyos_responses = [EVSResponseItemModel mj_objectArrayWithKeyValuesArray:iflyos_responses];
+    self.iflyos_responsesJSON = iflyos_responses;
 }
 @end

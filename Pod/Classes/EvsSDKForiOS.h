@@ -30,6 +30,15 @@
 -(EVSConnectState) state;
 
 /**
+ *  EVS是否已授权
+ */
+-(BOOL) isAuth;
+
+/**
+ * 停止查询授权状态
+ */
+-(void) stopCheckAuth;
+/**
  *  获取deviceId
  */
 -(NSString *) getDeviceId;
@@ -38,6 +47,11 @@
  *  连接EVS服务
  */
 -(void) connect;
+
+/**
+ *  授权EVS服务
+ */
+-(void) auth:(NSString *) deviceCode;
 
 /**
  *  重新连接EVS
@@ -108,6 +122,12 @@
 -(void) setVolume:(NSInteger)volume;
 
 /**
+ *  设置音乐播放器进度
+ *  progress : 进度 [0~1]
+ */
+-(void) setMeidaProgress:(float)progress;
+
+/**
  * 获取当前音量
  */
 -(float) getVolume;
@@ -128,4 +148,14 @@
  *  设置token（手工设置token后，需要重新连接EVS）
  */
 -(void) setToken:(NSString *) token;
+
+/**
+ *  获取token
+ */
+-(NSString *) getToken;
+
+/**
+ *  获取authorization
+ */
+-(NSString *) getAuthorization;
 @end

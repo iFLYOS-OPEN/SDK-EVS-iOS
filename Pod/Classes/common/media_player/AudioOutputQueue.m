@@ -10,6 +10,7 @@
 #import "AudioOutput.h"
 #import "EVSHeader.h"
 #import "EVSRequestHeader.h"
+#import "EVSVideoPlayerManager.h"
 
 #define dispatch_key "audiooutput_queue_dispatch"
 @interface AudioOutputQueue()<AudioOutputDelegate>
@@ -272,64 +273,132 @@
 /********************************************内容播放回调*************************************************/
 -(void) audioOutputContextChannelStart:(AudioOutput *)audioOutput model:(AudioOutputModel *)model{
     EVSLog(@"audio output contextChannel start >>> %@ (%@<%@>)",model.resource_id,model.metadata.text,model.metadata.title);
-    [self.delegate contextChannelStart:self.queue useModel:model];
-    NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
-    NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
-    if (model.type) {
-        [audioOutDict setObject:model.type forKey:@"playback_type"];
+    //特殊处理video
+    if ([model.type isEqualToString:@"video"]) {
+        if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(play)]) {
+            [[EVSVideoPlayerManager shareInstance].delegate play];
+        }
+        [self.delegate contextChannelStart:self.queue useModel:model];
+        NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+        if (deviceId) {
+            [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_playing,@"resource_id":model.resource_id,@"offset":@(model.offset)} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+        }
+        //同步
+        [self playbackOrTTSSync:model type:@"STARTED"];
+        [self.delegate contextChannelStart:self.queue useModel:model];
+    }else{
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:MEDIA_START];
+        }
+        [self.delegate contextChannelStart:self.queue useModel:model];
+        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+        NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
+        if (model.type) {
+            [audioOutDict setObject:model.type forKey:@"playback_type"];
+        }
+        [audioOutDict setObject:playback_state_playing forKey:@"playback_state"];
+        //存储数据库，然后同步到服务器
+        if (model.resource_id) {
+            [audioOutDict setObject:model.resource_id forKey:@"playback_resource_id"];
+        }
+        [audioOutDict setObject:@(model.offset) forKey:@"playback_offset"];
+        [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+        //同步
+        [self playbackOrTTSSync:model type:@"STARTED"];
+        [self.delegate contextChannelStart:self.queue useModel:model];
     }
-    [audioOutDict setObject:playback_state_playing forKey:@"playback_state"];
-    //存储数据库，然后同步到服务器
-    if (model.resource_id) {
-        [audioOutDict setObject:model.resource_id forKey:@"playback_resource_id"];
-    }
-    [audioOutDict setObject:@(model.offset) forKey:@"playback_offset"];
-    [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-    //同步
-    [self playbackOrTTSSync:model type:@"STARTED"];
-    [self.delegate contextChannelStart:self.queue useModel:model];
 }
 -(void) audioOutputContextChannelFinish:(AudioOutput *)audioOutput model:(AudioOutputModel *)model{
     EVSLog(@"audio output contextChannel finish >>> %@ (%@<%@>)",model.resource_id,model.metadata.text,model.metadata.title);
     
-    [self removeAudioQueue:model];//播放完毕就移除
-    [self removeUpcomingQueue:model];//移除即将播放列表
-    
-    //存储数据库，然后同步到服务器
-    NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
-    NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
-    [audioOutDict setObject:playback_state_paused forKey:@"playback_state"];
-    [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-    
-    AudioOutputModel *nextModel = self.queue.firstObject;
-    if (nextModel) {
-        //如果有下一个，则开始播放
-        [self playNext:nextModel];
-    }else{
-        //如果没有下一个，检查即将播放队列是否有播放
-        AudioOutputModel *upComingModel = self.upComingQueue.firstObject;
-        if (upComingModel) {
-            self.queue = [self.upComingQueue mutableCopy];
-            [self clearUpcomingQueue];
-            [self playQueue];
-        }
-    }
-    if (self.queue.count == 0) {
-        [self.audioOutput stop];
-        [audioOutDict setObject:playback_state_idle forKey:@"playback_state"];
-        [audioOutDict setObject:@"" forKey:@"playback_resource_id"];
-        [audioOutDict setObject:@(0) forKey:@"playback_offset"];
-        [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+    //特殊处理video
+    if ([model.type isEqualToString:@"video"]) {
+//        if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(pause)]) {
+//            [[EVSVideoPlayerManager shareInstance].delegate pause];
+//        }
+        
+        [self removeAudioQueue:model];//播放完毕就移除
+        [self removeUpcomingQueue:model];//移除即将播放列表
+        NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
+        [audioOutDict setObject:playback_state_paused forKey:@"state"];
+        
         NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
         if (deviceId) {
-            [[EVSSqliteManager shareInstance] update:@{@"session_status":@"FINISHED"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+            [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused,@"resource_id":model.resource_id,@"offset":@(model.offset)} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
         }
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:FINISHED];
+        AudioOutputModel *nextModel = self.queue.firstObject;
+        if (nextModel) {
+            //如果有下一个，则开始播放
+            [self playNext:nextModel];
+        }else{
+            //如果没有下一个，检查即将播放队列是否有播放
+            AudioOutputModel *upComingModel = self.upComingQueue.firstObject;
+            if (upComingModel) {
+                self.queue = [self.upComingQueue mutableCopy];
+                [self clearUpcomingQueue];
+                [self playQueue];
+            }
+        }
+        if (self.queue.count == 0) {
+            if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(stop)]) {
+                [[EVSVideoPlayerManager shareInstance].delegate stop];
+            }
+            
+            [audioOutDict setObject:playback_state_idle forKey:@"state"];
+            [audioOutDict setObject:@"" forKey:@"resource_id"];
+            [audioOutDict setObject:@(0) forKey:@"offset"];
+            [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+        }
+        
+        //播放下一个
+        [self playbackOrTTSSync:model type:@"FINISHED"];
+        [self.delegate contextChannelFinish:self.queue useModel:model];
+    }else{
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:MEDIA_STOP];
+        }
+        
+        [self removeAudioQueue:model];//播放完毕就移除
+        [self removeUpcomingQueue:model];//移除即将播放列表
+        
+        //存储数据库，然后同步到服务器
+        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+        NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
+        [audioOutDict setObject:playback_state_paused forKey:@"playback_state"];
+        [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+        
+        AudioOutputModel *nextModel = self.queue.firstObject;
+        if (nextModel) {
+            //如果有下一个，则开始播放
+            [self playNext:nextModel];
+        }else{
+            //如果没有下一个，检查即将播放队列是否有播放
+            AudioOutputModel *upComingModel = self.upComingQueue.firstObject;
+            if (upComingModel) {
+                self.queue = [self.upComingQueue mutableCopy];
+                [self clearUpcomingQueue];
+                [self playQueue];
+            }
+        }
+        if (self.queue.count == 0) {
+            [self.audioOutput stop];
+            [audioOutDict setObject:playback_state_idle forKey:@"playback_state"];
+            [audioOutDict setObject:@"" forKey:@"playback_resource_id"];
+            [audioOutDict setObject:@(0) forKey:@"playback_offset"];
+            [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+            NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+            if (deviceId) {
+                [[EVSSqliteManager shareInstance] update:@{@"session_status":@"FINISHED"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+            }
+            if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:FINISHED];
+            }
+        }
+        
+        //播放下一个
+        [self playbackOrTTSSync:model type:@"FINISHED"];
+        [self.delegate contextChannelFinish:self.queue useModel:model];
     }
-    
-    //播放下一个
-    [self playbackOrTTSSync:model type:@"FINISHED"];
-    [self.delegate contextChannelFinish:self.queue useModel:model];
 }
 
 /********************************************TTS播放回调*************************************************/
@@ -352,7 +421,7 @@
         }
     }
     //前景声音 20%
-    [self.audioOutput setBackgroundVolume20Percent];
+    [self.audioOutput setBackgroundVolume2Percent];
     
     //同步
     [self playbackOrTTSSync:model type:@"STARTED"];
@@ -420,6 +489,13 @@
             ttsProgressSync.iflyos_request.payload.resource_id = model.resource_id;
             NSDictionary *ttsProgressSyncDict = [ttsProgressSync getJSON];
             [[EVSWebscoketManager shareInstance] sendDict:ttsProgressSyncDict];
+        }else if([model.type isEqualToString:@"video"]){
+            EVSVideoPlayerProgressSync *videoProgressSync = [[EVSVideoPlayerProgressSync alloc] init];
+            videoProgressSync.iflyos_request.payload.type = type;
+            videoProgressSync.iflyos_request.payload.resource_id = model.resource_id;
+            videoProgressSync.iflyos_request.payload.offset = model.offset;
+            NSDictionary *videoProgressSyncDict = [videoProgressSync getJSON];
+            [[EVSWebscoketManager shareInstance] sendDict:videoProgressSync];
         }
     });
 }

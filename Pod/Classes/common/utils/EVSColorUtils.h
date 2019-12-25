@@ -11,21 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface EVSColorUtils : NSObject
-/**
- * 根据#FFFFFF获取颜色
- */
-+ (UIColor *)colorWithHexString:(NSString *)stringToConvert;
 
-/**
- * 根据#FFFFFF获取颜色
- * alpha 通道
- */
-+ (UIColor *)colorWithHexString:(NSString *)stringToConvert alpha:(CGFloat) alpha;
-
-/**
- *  随机颜色
- */
-+ (UIColor *)randomColor ;
 
 /**
  * 纯色图片

@@ -9,7 +9,7 @@
 #import "EVSFocusManager.h"
 #import "EVSHeader.h"
 #import "EVSRequestHeader.h"
-
+#import "EVSVideoPlayerManager.h"
 #define dispatch_key "focus_mananger_dispatch"
 @interface EVSFocusManager()<AudioOutputQueueDelegate>
 @property(strong,nonatomic) AudioInput *input;//录音
@@ -85,6 +85,7 @@
                         }
                     }
                 }else{
+                    //被动
                     [self excuteNotMaunalResponse:newModel];
                 }
             }
@@ -101,7 +102,10 @@
         if ([payloadItem.header.name isEqualToString:speaker_set_volume]) {
             EVSLog(@"****************** speaker.set_volume ******************");
             float volume = payloadItem.payload.volume;
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+            if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:volume:)]){
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+            }
+            
             NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
             [[EVSSqliteManager shareInstance] update:@{@"speaker_volume":@(volume)} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             [[EVSApplication shareInstance] setVolume:volume];
@@ -110,6 +114,35 @@
             long timestamp = payloadItem.payload.timestamp;
             NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
             [[EVSSqliteManager shareInstance] update:@{@"timestamp":@(timestamp)} device_id:deviceId tableName:SYSTEM_TABLE_NAME];
+        }else if ([payloadItem.header.name isEqualToString:app_action_check]) {
+            EVSLog(@"****************** app_action.check ******************");
+            NSString *check_id = payloadItem.payload.check_id;
+            NSArray *actions = payloadItem.payload.actions;
+            NSMutableArray *actionsArray = [[NSMutableArray alloc] init];
+            if (actions) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    for (EVSResponsePayloadAppActionModel *appAction in actions) {
+                        EVSAppActionCheckResultRequestPayloadActions *appActionCheckResult = [[EVSAppActionCheckResultRequestPayloadActions alloc] init];
+                        appActionCheckResult.action_id = appAction.action_id;
+                        
+                            NSString *uri = [appAction.data.uri stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+                            NSURL *url = [NSURL URLWithString:uri];
+                            if ([[UIApplication sharedApplication] canOpenURL:url]) {
+                                appActionCheckResult.result = YES;
+                            }else{
+                                appActionCheckResult.result = NO;
+                            }
+                         
+                        [actionsArray addObject:appActionCheckResult];
+                    }
+                    EVSAppActionCheckResult *appActionCheckResult = [[EVSAppActionCheckResult alloc] init];
+                    appActionCheckResult.iflyos_request.payload.check_id = check_id;
+                    appActionCheckResult.iflyos_request.payload.actions = [actionsArray copy];
+                    NSDictionary *dict = [appActionCheckResult getJSON];
+                    [[EVSWebscoketManager shareInstance] sendDict:dict];
+                });
+            }
+            
         }else if ([payloadItem.header.name isEqualToString:system_error]) {
             EVSLog(@"****************** system.error ******************");
             if (payloadItem.payload.code == 401) {
@@ -220,9 +253,11 @@
         dispatch_async(queue, ^{
             if (payloadItem) {
                 //判断是否音频资源指令audio_player.audio_out（PLAYBACK & TTS & RING）
-                if([payloadItem.header.name containsString:@"audio_player"] &&
+                if(([payloadItem.header.name containsString:audio_player_audio_out] ||
+                   [payloadItem.header.name isEqualToString:video_player_video_out]) &&
                    ([payloadItem.payload.type isEqualToString:@"PLAYBACK"] ||
                     [payloadItem.payload.type isEqualToString:@"TTS"] ||
+                    [payloadItem.payload.control isEqualToString:@"PLAY"] ||
                     [payloadItem.payload.type isEqualToString:@"RING"]) &&
                    payloadItem.payload.resource_id &&
                    payloadItem.payload.url){
@@ -248,6 +283,10 @@
                     }else if ([payloadItem.payload.type isEqualToString:@"TTS"]) {
                         model.focusStatus = tts_channel;
                         model.focusLevel = 10;
+                    }else if ([payloadItem.header.name isEqualToString:video_player_video_out]){
+                        model.focusStatus = context_channel;
+                        model.focusLevel = 50;
+                        model.type = @"video";
                     }
                     
                     //资源播放方式
@@ -303,6 +342,27 @@
                         //移除指令
                         [self removeQueue:payloadItem];
                         [[AudioInput sharedAudioManager] stop];
+                    }else if ([payloadItem.header.name isEqualToString:video_player_video_out]){
+                        EVSLog(@"****************** video_player.video_out ******************");
+                        //操作
+                        NSString *control = payloadItem.payload.control;//播放，暂停，继续播放
+                        if (control){
+                            NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
+                            NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+                            if ([control isEqualToString:@"PAUSE"]) {
+                                //暂停
+                                if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(pause)]) {
+                                    [[EVSVideoPlayerManager shareInstance].delegate pause];
+                                }
+                                [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+                            }else if ([control isEqualToString:@"resume"]) {
+                                //继续
+                                if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(play)]) {
+                                    [[EVSVideoPlayerManager shareInstance].delegate play];
+                                }
+                                [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_playing} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+                            }
+                        }
                     }else if ([payloadItem.header.name isEqualToString:audio_player_audio_out]) {
                         EVSLog(@"****************** audio_player.audio_out ******************");
                         if ([payloadItem.payload.type isEqualToString:@"PLAYBACK"]){
@@ -334,7 +394,10 @@
                     }else if ([payloadItem.header.name isEqualToString:speaker_set_volume]) {
                         EVSLog(@"****************** speaker.set_volume ******************");
                         float volume = payloadItem.payload.volume;
-                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+                        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:volume:)]){
+                            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+                        }
+                        
                         NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
                         [[EVSSqliteManager shareInstance] update:@{@"speaker_volume":@(volume)} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
                         [[EVSApplication shareInstance] setVolume:volume];
@@ -370,6 +433,71 @@
                                 [[EvsSDKForiOS shareInstance] tap];
                             }
                         }
+                    }else if([payloadItem.header.name isEqualToString:app_action_check_excute]){
+                        EVSLog(@"****************** app_action.excute ******************");
+                        NSArray *actions = payloadItem.payload.actions;
+                        
+                        if (actions) {
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                for (EVSResponsePayloadAppActionModel *appAction in actions) {
+                                    NSString *excution_id = appAction.execution_id;
+                                    NSString *action_id = appAction.action_id;
+                                    NSString *uri = [appAction.data.uri stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+                                    NSURL *url = [NSURL URLWithString:uri];
+                                    if ([[UIApplication sharedApplication] canOpenURL:url]) {
+
+                                        if(@available(iOS 10.0, *)) {
+                                        //ios10及以后
+                                            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
+                                                if (success) {
+                                                    //成功
+                                                    EVSAppActionExcuteSuccess *appActionSuccess = [[EVSAppActionExcuteSuccess alloc]init];
+                                                    appActionSuccess.iflyos_request.payload.action_id = action_id;
+                                                    NSDictionary *dict = [appActionSuccess getJSON];
+                                                    [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                                    
+                                                }else{
+                                                    //失败
+                                                    EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
+                                                    appActionFail.iflyos_request.payload.action_id = action_id;
+                                                    appActionFail.iflyos_request.payload.execution_id = excution_id;
+                                                    appActionFail.iflyos_request.payload.failure_code = @"ACTION_UNSUPPORTED";
+                                                    NSDictionary *dict = [appActionFail getJSON];
+                                                    [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                                }
+                                            }];
+                                        }else{
+                                        //ios10之前
+                                            BOOL success = [[UIApplication sharedApplication] openURL:url];
+                                            if (success) {
+                                                //成功
+                                                EVSAppActionExcuteSuccess *appActionSuccess = [[EVSAppActionExcuteSuccess alloc]init];
+                                                appActionSuccess.iflyos_request.payload.action_id = action_id;
+                                                NSDictionary *dict = [appActionSuccess getJSON];
+                                                [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                            }else{
+                                                //失败
+                                                EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
+                                                appActionFail.iflyos_request.payload.action_id = action_id;
+                                                appActionFail.iflyos_request.payload.execution_id = excution_id;
+                                                appActionFail.iflyos_request.payload.failure_code = @"ACTION_UNSUPPORTED";
+                                                NSDictionary *dict = [appActionFail getJSON];
+                                                [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                            }
+                                        }
+                                        
+                                    }else{
+                                        EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
+                                        appActionFail.iflyos_request.payload.action_id = action_id;
+                                        appActionFail.iflyos_request.payload.execution_id = excution_id;
+                                        appActionFail.iflyos_request.payload.failure_code = @"APP_NOT_FOUND";
+                                        
+                                        NSDictionary *dict = [appActionFail getJSON];
+                                        [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                    }
+                                }
+                            });
+                        }
                     }
                     //移除指令
                     [self removeQueue:payloadItem];
@@ -397,7 +525,10 @@
         }
     }
     if (self.queue.count == 0) {
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+        }
+        
         NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
         if (deviceId) {
             [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
@@ -426,9 +557,11 @@
     if (self.queue.count == 0) {
         NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
         if (deviceId) {
-            [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+            [[EVSSqliteManager shareInstance] update:@{@"session_status":playback_state_idle} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
         }
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+        }
     }
 }
 

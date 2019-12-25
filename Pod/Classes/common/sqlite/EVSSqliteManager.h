@@ -88,6 +88,10 @@ NS_ASSUME_NONNULL_BEGIN
  * 根据deviceId查询
  */
 -(NSDictionary *) asynQuerySystem:(NSString *)device_id tableName:(NSString *) tableName;
+/**
+ * 根据deviceId查询
+ */
+-(NSDictionary *) asynQueryVideoPlayer:(NSString *)device_id tableName:(NSString *) tableName;
 @end
 
 NS_ASSUME_NONNULL_END

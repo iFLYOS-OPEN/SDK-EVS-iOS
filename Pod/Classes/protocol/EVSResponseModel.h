@@ -27,16 +27,42 @@ NS_ASSUME_NONNULL_BEGIN
 @property(assign,nonatomic) long duration; //时长
 @end
 
+@interface EVSResponsePayloadProviderModel : NSObject
+@property(copy,nonatomic) NSString *name; //产品名
+@property(copy,nonatomic) NSString *logo_url; //产品url
+@end
+
+@interface EVSResponsePayloadContentModel : NSObject
+@property(copy,nonatomic) NSString *primary_text; //文本1
+@property(copy,nonatomic) NSString *secondary_text; //文本2
+@property(copy,nonatomic) NSString *tertiary_text; //文本3
+@property(copy,nonatomic) NSString *image_url; //图片
+@property(assign,nonatomic) long media_duration; //时长
+@end
+
+@interface EVSResponsePayloadAppActionDataModel : NSObject
+@property(copy,nonatomic) NSString *package_name; //包名（schema）
+@property(copy,nonatomic) NSString *uri; //openURL
+@end
+
+@interface EVSResponsePayloadAppActionModel : NSObject
+@property(copy,nonatomic) NSString *action_id;
+@property(copy,nonatomic) NSString *execution_id;
+@property(strong,nonatomic) EVSResponsePayloadAppActionDataModel *data;
+@end
+
 @interface EVSResponsePayloadModel : NSObject
 @property(copy,nonatomic) NSString *type; //响应类型（TTS，playback,template）
 @property(copy,nonatomic) NSString *resource_id; //内容ID
+@property(copy,nonatomic) NSString *background_image_url; //图片
 @property(copy,nonatomic) NSString *url; //资源地址
 @property(copy,nonatomic) NSString *control; //播放器控制，取值：- PLAY: 播放- PAUSE: 暂停- RESUME: 继续播放
 @property(copy,nonatomic) NSString *behavior; //播放方式- IMMEDIATELY: 马上播放，- UPCOMING: 即将播放（播放队列播放完才播放）
 @property(assign,nonatomic) long offset; //播放进度
 @property(copy,nonatomic) NSString *lyric; //歌词信息
 @property(strong,nonatomic) EVSResponsePayloadMetadataModel *metadata; //元数据
-
+@property(strong,nonatomic) EVSResponsePayloadContentModel *content;
+@property(strong,nonatomic) EVSResponsePayloadProviderModel *provider; 
 //识别返回文本
 @property(copy,nonatomic) NSString *text; //识别的内容
 @property(assign,nonatomic) BOOL is_last; //是否最后识别
@@ -58,6 +84,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 //是否继续播放音频
 @property(assign,nonatomic) BOOL isResumeContextChannel;
+
+//app action
+@property(copy,nonatomic) NSString *check_id;
+@property(strong,nonatomic) NSArray *actions;
 @end
 
 @interface EVSResponseItemModel : NSObject
@@ -68,6 +98,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface EVSResponseModel : NSObject
 @property(strong,nonatomic) EVSResponseMetaModel *iflyos_meta;
 @property(strong,nonatomic) NSArray *iflyos_responses;//EVSResponseItemModel
+@property(strong,nonatomic) NSArray *iflyos_responsesJSON;//json string
 @end
 
 NS_ASSUME_NONNULL_END

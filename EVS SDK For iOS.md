@@ -1,10 +1,11 @@
 # EVS SDK For iOS
 
-### 版本：1.0.0
+### 版本：1.0.1
 
 | 版本  | 更新内容                                                     | 支持设备    | 支持OS版本   |
 | ----- | ------------------------------------------------------------ | ----------- | ------------ |
 | 1.0.0 | 1.EVS授权,连接,重连接 <br>2.tap唤醒<br/> 3.打断 <br/>4.结束<br/> 5.暂停<br/> 6.恢复<br/> 7.下一首<br/> 8.上一首 <br/>9.tts合成 <br/>10.文本识别 | iphone,ipad | iOS 10.1以上 |
+| 1.0.1 | 1.新增视频播放器 <br>2.新增语音操作app action 打开第三方应用<br>3.优化焦点管理<br>4.修复部分bug | iphone,ipad | iOS 10.1以上 |
 
 ### SDK文件
 
@@ -190,7 +191,80 @@ create:deviceId:wsURL 与 [[EvsSDKForiOS shareInstance] restoreEVS:deviceId:wsUR
 | ----- | ------ | ----------- | -------------------------------- |
 | token | string | 自定义token | 手工设置token后，需要重新连接EVS |
 
-#### 
+#### 17.设置getToken
+
+返回参数
+
+| 参数  | 类型   | 说明 | 备注                 |
+| ----- | ------ | ---- | -------------------- |
+| token | string |      | 获取evs access Token |
+
+#### 18.getAuthorization
+
+返回参数
+
+| 参数          | 类型   | 说明 | 备注                  |
+| ------------- | ------ | ---- | --------------------- |
+| authorization | string |      | 获取evs Authorization |
+
+#### 视频管理器
+
+#### EVSVideoPlayerManager<EVSVideoPlayerDelegate>
+
+#### 1.创建视频窗口createVideoPlayer:offset:resource_id
+
+| 参数        | 类型   | 说明        | 备注 |
+| ----------- | ------ | ----------- | ---- |
+| frame       | CGRect | 视图大小    |      |
+| url         | String | 视频资源url |      |
+| offset      | long   | 时间点      |      |
+| resource_id | String | 资源ID      |      |
+
+#### 2.播放新资源play:offset:resource_id
+
+| 参数        | 类型   | 说明        | 备注 |
+| ----------- | ------ | ----------- | ---- |
+| url         | String | 视频资源url |      |
+| offset      | long   | 时间点      |      |
+| resource_id | String | 资源ID      |      |
+
+#### 3.暂停pause
+
+| 参数 | 类型 | 说明 | 备注 |
+| ---- | ---- | ---- | ---- |
+| -    | -    | -    | -    |
+
+#### 4.恢复resume
+
+| 参数 | 类型 | 说明 | 备注 |
+| ---- | ---- | ---- | ---- |
+| -    | -    | -    | -    |
+
+#### 5.播放play:offset:
+
+| 参数   | 类型 | 说明   | 备注 |
+| ------ | ---- | ------ | ---- |
+| offset | long | 时间点 |      |
+
+#### 6.播放play
+
+| 参数 | 类型 | 说明 | 备注 |
+| ---- | ---- | ---- | ---- |
+| -    | -    | -    | -    |
+
+#### 7.全屏模式setNewOrientation:
+
+| 参数       | 类型 | 说明     | 备注 |
+| ---------- | ---- | -------- | ---- |
+| fullscreen | Bool | 是否全屏 |      |
+
+#### 8.清除资源clean
+
+| 参数 | 类型 | 说明 | 备注 |
+| ---- | ---- | ---- | ---- |
+| -    | -    | -    | -    |
+
+####  
 
 ### EVS 代理回调
 

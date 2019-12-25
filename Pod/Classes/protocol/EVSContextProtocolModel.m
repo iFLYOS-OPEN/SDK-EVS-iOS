@@ -13,6 +13,46 @@
     return @"1.0";
 }
 @end
+@implementation EVSContextAppActionModel
+-(NSString *) version{
+    return @"1.0";
+}
+//-(NSString *) foreground_app{
+//    return @"com.qiyi.video.speaker";
+//}
+//
+//-(NSString *) activity{
+//    return @"com.qiyi.video.speaker";
+//}
+@end
+
+@implementation EVSContextVideoPlayerModel
+-(id) init{
+    if (self == [super init]) {
+        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+        NSDictionary *videoPlayerDict = [[EVSSqliteManager shareInstance] asynQueryVideoPlayer:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+        if (videoPlayerDict) {
+            id state = videoPlayerDict[@"state"];
+            if (state) {
+                self.state = state;
+            }
+            id resource_id = videoPlayerDict[@"resource_id"];
+            if (resource_id) {
+                self.resource_id = resource_id;
+            }
+            id offset = videoPlayerDict[@"offset"];
+            if (offset) {
+                self.offset = [offset longValue];
+            }
+        }
+    }
+    return self;
+}
+
+-(NSString *) version{
+    return @"1.0";
+}
+@end
 
 @implementation EVSContextProtocolModel
 -(EVSContextSystemProtocolModel *) system{
@@ -69,6 +109,20 @@
         _playback_controller = [[EVSPlaybackControllerProtocolModel alloc] init];
     }
     return _playback_controller;
+}
+
+-(EVSContextAppActionModel *) app_action{
+    if (!_app_action) {
+        _app_action = [[EVSContextAppActionModel alloc] init];
+    }
+    return _app_action;
+}
+
+-(EVSContextVideoPlayerModel *) video_player{
+    if (!_video_player) {
+        _video_player = [[EVSContextVideoPlayerModel alloc] init];
+    }
+    return _video_player;
 }
 
 +(NSDictionary *) getJSON{

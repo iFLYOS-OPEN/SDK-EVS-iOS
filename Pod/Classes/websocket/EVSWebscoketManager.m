@@ -109,10 +109,13 @@
         //接收到推送的新数据message,可以是json,可以是data等
         //信息统一处理渠道
         EVSResponseModel *responseModel = [EVSResponseModel mj_objectWithKeyValues:message];
+        EVSLog(@"[*] response <<< %@",message);
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:responseMsg:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] responseMsg:message];
+        }
         
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] responseMsg:message];
         if (responseModel.iflyos_responses.count > 0){
-            EVSLog(@"[*] response <<< %@",message);
+            
             [[EVSFocusManager shareInstance] addQueue:responseModel];
         }
     }
@@ -122,16 +125,20 @@
     EVSLog(@"#                 socket connect success...                #");
     EVSLog(@"############################################################");
     EVSConnectState state = self.socket.readyState;
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:nil];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:connectState:error:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:nil];
+    }
     [[NSNotificationCenter defaultCenter] postNotificationName:k_NOTIFICATION_WS_STATE object:@(self.socket.readyState)];
     [[EVSFocusManager shareInstance] playPowerOn];
-    [EVSSystemManager stateSync];
+    [[EVSSystemManager shareInstance] stateSync];
 }
 - (void)webSocket:(SRWebSocket *)webSocket didFailWithError:(NSError *)error {
     EVSLog(@"socket connect fail:%@",error);
     [[EVSFocusManager shareInstance] playNetworkErrorRetry];
     EVSConnectState state = self.socket.readyState;
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:error];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:connectState:error:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:error];
+    }
     [EVSSystemManager exception:@"ws_connect_fail" code:[NSString stringWithFormat:@"%li",error.code] message:error.localizedDescription];
     [[NSNotificationCenter defaultCenter] postNotificationName:k_NOTIFICATION_WS_STATE object:@(self.socket.readyState)];
 }
@@ -144,7 +151,9 @@
         errorStr = reason;
     }
     NSError *error = [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:code userInfo:@{NSLocalizedDescriptionKey:errorStr}];
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:error];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:connectState:error:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:error];
+    }
     [EVSSystemManager exception:@"ws_connect_close" code:[NSString stringWithFormat:@"%li",code] message:reason];
     [[NSNotificationCenter defaultCenter] postNotificationName:k_NOTIFICATION_WS_STATE object:@(self.socket.readyState)];
 }
@@ -161,13 +170,16 @@
  */
 -(void) sendStr:(NSString *) dataStr{
     EVSLog(@"[*] Request >>> %@",dataStr);
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] requestMsg:dataStr];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:requestMsg:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] requestMsg:dataStr];
+    }
+    
         if (self.socket != nil) {
             // 只有 SR_OPEN 开启状态才能调 send 方法啊，不然要崩
             if (self.socket.readyState == SR_OPEN) {
                 [self.socket send:dataStr];    // 发送数据
             }   else if (self.socket.readyState == SR_CONNECTING) {
-                NSLog(@"正在连接中，重连后其他方法会去自动同步数据");
+//                NSLog(@"正在连接中，重连后其他方法会去自动同步数据");
                 // 每隔2秒检测一次 socket.readyState 状态，检测 10 次左右
                 // 只要有一次状态是 SR_OPEN 的就调用 [ws.socket send:data] 发送数据
                 // 如果 10 次都还是没连上的，那这个发送请求就丢失了，这种情况是服务器的问题了，小概率的
@@ -175,7 +187,7 @@
                 // [self reConnect];
             } else if (self.socket.readyState == SR_CLOSING || self.socket.readyState == SR_CLOSED)   {
                 // websocket 断开了，调用 reConnect 方法重连
-                NSLog(@"重连");
+//                NSLog(@"重连");
 //                [self reconnect];
             }
         } else {
@@ -198,7 +210,7 @@
             if (self.socket.readyState == SR_OPEN) {
                 [self.socket send:data];    // 发送数据
             }   else if (self.socket.readyState == SR_CONNECTING) {
-                NSLog(@"正在连接中，重连后其他方法会去自动同步数据");
+//                NSLog(@"正在连接中，重连后其他方法会去自动同步数据");
                 // 每隔2秒检测一次 socket.readyState 状态，检测 10 次左右
                 // 只要有一次状态是 SR_OPEN 的就调用 [ws.socket send:data] 发送数据
                 // 如果 10 次都还是没连上的，那这个发送请求就丢失了，这种情况是服务器的问题了，小概率的
@@ -206,7 +218,7 @@
                 // [self reConnect];
             } else if (self.socket.readyState == SR_CLOSING || self.socket.readyState == SR_CLOSED)   {
                 // websocket 断开了，调用 reConnect 方法重连
-                NSLog(@"重连");
+//                NSLog(@"重连");
 //                [self reconnect];
             }
         } else {

@@ -5,6 +5,7 @@
 //  Created by 周经伟 on 2019/7/26.
 //  Copyright © 2019 iflytek. All rights reserved.
 //
+#import <iflytek-wakeup.h>
 #import "AudioInput.h"
 #import "EVSHeader.h"
 #import <AVFoundation/AVFoundation.h>
@@ -216,8 +217,8 @@ static OSStatus RecordCallback(void *inRefCon,
 
 //始终录音
 -(void) run{
-    OSStatus status = AudioOutputUnitStart(audioUnit);
-    checkStatus(status);
+//    OSStatus status = AudioOutputUnitStart(audioUnit);
+//    checkStatus(status);
     if ([self wakeStart]) {
         self.openWakeupStream = YES;
     }else{
@@ -233,9 +234,13 @@ static OSStatus RecordCallback(void *inRefCon,
 
 //开启 Audio Unit
 - (void)start {
+    OSStatus status = AudioOutputUnitStart(audioUnit);
+    checkStatus(status);
     [[AudioOutput shareInstance] setBackgroundVolume2Percent];
     self.openAudioInputStream = YES;
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:LISTENING];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:LISTENING];
+    }
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"session_status":@"LISTENING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
@@ -244,9 +249,13 @@ static OSStatus RecordCallback(void *inRefCon,
 
 //关闭 Audio Unit
 - (void)stop {
+    OSStatus status = AudioOutputUnitStop(audioUnit);
+    checkStatus(status);
     [[AudioOutput shareInstance] resumeBackgroundVolume];
     self.openAudioInputStream = NO;
-    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:THINKING];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:THINKING];
+    }
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"session_status":@"THINKING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
@@ -278,7 +287,9 @@ static OSStatus RecordCallback(void *inRefCon,
         // 平方和除以数据总长度，得到音量大小。
         float mean = pcmAllLenght / (float)pcmData.length;
         float volume =10*log10(mean);//volume为分贝数大小
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] decibel:volume];
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:decibel:)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] decibel:volume];
+        }
     }
 }
 

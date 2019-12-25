@@ -45,18 +45,14 @@
     if (self.access_token) {
         [dict setObject:self.access_token forKey:@"access_token"];
     }
-    if (self.access_token) {
+    if (self.token_type) {
         [dict setObject:self.token_type forKey:@"token_type"];
     }
-    if (self.access_token) {
+    if (self.refresh_token) {
         [dict setObject:self.refresh_token forKey:@"refresh_token"];
     }
-    if (self.access_token) {
-        [dict setObject:@(self.expires_in) forKey:@"expires_in"];
-    }
-    if (self.access_token) {
-        [dict setObject:@(self.created_at) forKey:@"created_at"];
-    }
+    [dict setObject:@(self.expires_in) forKey:@"expires_in"];
+    [dict setObject:@(self.created_at) forKey:@"created_at"];
     [sqliteManager update:dict device_id:deviceId tableName:CONFIG_TABLE_NAME];
 }
 @end

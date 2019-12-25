@@ -70,8 +70,28 @@
     dispatch_once(&onceToken, ^{
         shareInstance = [[self alloc] init];
         [[AudioInput sharedAudioManager] run];
+        //使用ffmpeg licence 是demo licence
+        [AVPLicense register:@"zneaHNCzElTcs6RhLDeJm6UKot04AjDe0zdhXCn1scTsxX5Gwv4jRtvH7dNjnKiZw3L/ANm83F0TTB40xawqFYupmFzs4nklcQaqpLr3Osf4KPy5Jf0c+FdvQqmU6mIohnmsvuP4cgOvfy9quLtFcIqLrKYKmhaJSz93Y1F4dg2QwlNwnYyMmQ7sQYQrjqYyADB3vQ0X1eYEtVODG6XfmF7EMzyN5X8Qr4kt1Vrk1Qg="];
     });
     return shareInstance;
+}
+
+/**
+ *  EVS是否已授权
+ */
+-(BOOL) isAuth{
+    __block BOOL isLogin = NO;
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+    __weak typeof(self) weakSelf = self;
+    [self.sqlLiteManager queryConfig:deviceId tableName:CONFIG_TABLE_NAME callback:^(NSDictionary * _Nonnull dict) {
+        if (dict) {
+            NSString *access_token = dict[@"access_token"];
+            if (access_token && ![access_token isEqualToString:@""]) {
+                isLogin = YES;
+            }
+        }
+    }];
+    return isLogin;
 }
 /**
  * 重新设置EVS
@@ -114,20 +134,29 @@
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             }
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            }
+            
         }else{
             id vObj = dict[@"speaker_volume"];
             if (vObj) {
                 float volume = [vObj floatValue];
                 [[EVSApplication shareInstance] setSystemVolume:100];
                 [[EVSApplication shareInstance] setVolume:volume];
-                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:volume:)]){
+                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] volume:volume];
+                }
+                
             }
             NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             }
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            }
+            
         }
     }];
     
@@ -136,6 +165,14 @@
             EVSLog(@"EVS system database init...");
             NSDictionary *dict = @{@"device_id":cacheDeviceId,@"timestamp":@([NSDate getTimestamp]),@"enable_vad":@(YES),@"format":@"AUDIO_L16_RATE_16000_CHANNELS_1",@"profile":@"CLOSE_TALK"};
             [weakSelf.sqlLiteManager insert:dict tableName:SYSTEM_TABLE_NAME];
+        }
+    }];
+    
+    [self.sqlLiteManager queryHeader:cacheDeviceId tableName:VIDEO_PLAYER_TABLE_NAME callback:^(NSDictionary * _Nonnull dict) {
+        if (!dict || dict.count == 0) {
+            EVSLog(@"EVS video player database init...");
+            NSDictionary *dict = @{@"device_id":cacheDeviceId,@"state":@"IDLE"};
+            [weakSelf.sqlLiteManager insert:dict tableName:VIDEO_PLAYER_TABLE_NAME];
         }
     }];
 }
@@ -191,6 +228,46 @@
 }
 
 /**
+ *  连接EVS服务
+ */
+-(void) auth:(NSString *) deviceCode{
+    SRReadyState state = self.websocketManager.state;
+    if (state == SR_OPEN) {
+        EVSLog(@"EVS is connected...");
+        return;
+    }
+    if (!deviceCode) {
+        EVSLog(@"deviceCode is null...");
+        return;
+    }
+    //检查授权
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+    __weak typeof(self) weakSelf = self;
+    [self.sqlLiteManager queryConfig:deviceId tableName:CONFIG_TABLE_NAME callback:^(NSDictionary * _Nonnull dict) {
+        if (dict) {
+            NSString *clientId = dict[@"client_id"];
+            NSString *access_token = dict[@"access_token"];
+            NSString *ws_url = dict[@"ws_url"];
+            if (clientId) {
+                if (!access_token || [access_token isEqualToString:@""]) {
+                    //没授权
+                    [self.authManager authToken:clientId device_code:deviceCode];
+                }else{
+                    //已授权
+                    //连接websocket
+                    [EVSWebscoketManager connectWebsocket:access_token wsURL:ws_url];
+                }
+            }
+        }
+        if (!dict || dict.count == 0) {
+            EVSLog(@"********************EVS create instance fail,please try (create EvsSDKForiOS instance) again...********************");
+        }
+    }];
+    
+    [[EVSSystemManager shareInstance] periodicReview];
+}
+
+/**
  *  重新连接EVS
  */
 -(void) reconnect{
@@ -213,7 +290,12 @@
     [[EVSFocusManager shareInstance] playPowerOff];
     [[EVSSystemManager shareInstance] stopReview];
 }
-
+/**
+ * 停止查询授权状态
+ */
+-(void) stopCheckAuth{
+    [EVSAuthManager shareInstance].isStopLoop = YES;
+}
 /**
  *  出厂化EVS
  */
@@ -403,6 +485,14 @@
     }
 }
 
+/**
+ *  设置音乐播放器进度
+ *  progress : 进度 [0~1]
+ */
+-(void) setMeidaProgress:(float)progress{
+    self.audioOutput.currentProgress = progress;
+}
+
 -(float) getVolume{
     float volume = 0.0f;
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
@@ -443,11 +533,34 @@
         EVSLog(@"token can't set nil..");
     }
 }
+
+/**
+ *  获取token
+ */
+-(NSString *) getToken{
+    EVSAuthModel *authModel = [EVSAuthModel loadModel];
+    if (authModel) {
+        return authModel.access_token;
+    }
+    return nil;
+}
+
+/**
+ *  获取authorization
+ */
+-(NSString *) getAuthorization{
+    EVSAuthModel *authModel = [EVSAuthModel loadModel];
+    if (authModel) {
+        return authModel.authorization;
+    }
+    return nil;
+}
+
 /***************打断清理***************/
 -(void) clearAll{
     [[EVSFocusManager shareInstance] clearQueueAndCommandQueue];//请求则清理之前队列里面所有东西
-    [[AudioOutputQueue shareInstance] clearAudioQueue];
-    [[AudioOutputQueue shareInstance] clearUpcomingQueue];
+//    [[AudioOutputQueue shareInstance] clearAudioQueue];
+//    [[AudioOutputQueue shareInstance] clearUpcomingQueue];
     [[AudioOutputQueue shareInstance] clearTTSChannelQueue];
 }
 @end

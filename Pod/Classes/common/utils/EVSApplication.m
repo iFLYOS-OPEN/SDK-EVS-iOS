@@ -84,7 +84,6 @@ static void PlaySoundCompletionBlock(SystemSoundID SSID, void *clientData) {
     float volume = value/100.0f;
     [[AudioOutput shareInstance] setVolume:volume];
     [[AudioOutput shareInstance] setTTSVolume:volume];
-    [EVSSystemManager stateSync];
 }
 
 - (MPVolumeView *)volumeView {

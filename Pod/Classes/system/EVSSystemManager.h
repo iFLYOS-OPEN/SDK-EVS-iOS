@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  同步状态
  */
-+(void) stateSync;
+-(void) stateSync;
 
 /**
  *  同步错误信息

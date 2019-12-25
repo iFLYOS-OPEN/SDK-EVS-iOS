@@ -101,7 +101,6 @@
     progressSync.iflyos_request.payload.type = @"STARTED";
     progressSync.iflyos_request.payload.resource_id = payloadItem.payload.resource_id;
     progressSync.iflyos_request.payload.offset = payloadItem.payload.offset;
-    
 }
 
 /**
