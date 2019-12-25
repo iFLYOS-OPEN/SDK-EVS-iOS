@@ -13,5 +13,5 @@ target 'EvsSDKDemo' do
     pod 'AFNetworking'
     pod 'WebViewJavascriptBridge'
     pod 'KeychainItemWrapper-Copy'
-    pod 'SDK-EVS-iOS','~> 1.0.0'
+    pod 'SDK-EVS-iOS','~> 1.0.2'
 end

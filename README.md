@@ -78,7 +78,7 @@
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.0.1'
+    pod 'SDK-EVS-iOS','~> 1.0.2'
     ```
 
 
@@ -271,14 +271,14 @@
 返回参数
 | 参数  | 类型   | 说明        | 备注                             |
 | ----- | ------ | ----------- | -------------------------------- |
-| token | string |  | 获取evs access Token |
+| token | string | - | 获取evs access Token |
 
   #### 18.getAuthorization
 
 返回参数
 | 参数  | 类型   | 说明        | 备注                             |
 | ----- | ------ | ----------- | -------------------------------- |
-| authorization | string |  | 获取evs Authorization |
+| authorization | string | - | 获取evs Authorization |
 
  #### 视频管理器
 
