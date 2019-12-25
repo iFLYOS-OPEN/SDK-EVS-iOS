@@ -20,7 +20,8 @@ s.dependency 'KeychainItemWrapper-Copy'
 s.pod_target_xcconfig = {
 'ONLY_ACTIVE_ARCH' => 'YES',
 'OTHER_LDFLAGS' => ['-ObjC'] ,
-'ENABLE_BITCODE' => 'NO'
+'ENABLE_BITCODE' => 'NO',
+'USER_HEADER_SEARCH_PATHS' => '"${PROJECT_DIR}/EvsSDKForiOS/common/lib"'
 }
 
 s.ios.deployment_target = '10.1'
