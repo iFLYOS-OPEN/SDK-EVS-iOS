@@ -78,7 +78,7 @@
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.0.4'
+    pod 'SDK-EVS-iOS','~> 1.0.5'
     ```
 
 
