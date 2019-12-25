@@ -67,10 +67,13 @@
         
         NSString *createSystemSql = @"CREATE TABLE IF NOT EXISTS t_evs_system (device_id text primary key,timestamp TIMESTAMP NOT NULL,enable_vad boolean,profile text,format text);";
         
+        NSString *createVideoPlayerSql = @"CREATE TABLE IF NOT EXISTS t_evs_video_player (device_id text primary key,state text,resource_id text, offset integer);";
+        
         [fmdb executeUpdate:createConfigSql];
         [fmdb executeUpdate:createHeaderSql];
         [fmdb executeUpdate:createContextSql];
         [fmdb executeUpdate:createSystemSql];
+        [fmdb executeUpdate:createVideoPlayerSql];
     }];
     [self open];
 }
@@ -587,6 +590,43 @@
     }];
     dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);//阻塞等待 信号量-1
     
+    return dict;
+}
+
+/**
+ * 根据deviceId查询
+ */
+-(NSDictionary *) asynQueryVideoPlayer:(NSString *)device_id tableName:(NSString *) tableName{
+    NSString *sql = [NSString stringWithFormat:@"select * from %@ where device_id = '%@'",tableName,device_id];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);//创建信号量初始值为0
+    [self.queue inDatabase:^(FMDatabase * _Nonnull db) {
+        FMResultSet *rs = [db executeQuery:sql];
+        while ([rs next]) {
+            NSString *device_id = [rs stringForColumnIndex:0];
+            NSString *state = [rs stringForColumnIndex:1];
+            NSString *resource_id = [rs stringForColumnIndex:2];
+            NSInteger offset = [rs intForColumnIndex:3];
+            
+            if (device_id) {
+                [dict setObject:device_id forKey:@"device_id"];
+            }
+            
+            if (state) {
+                [dict setObject:state forKey:@"state"];
+            }
+            if (resource_id) {
+                [dict setObject:resource_id forKey:@"resource_id"];
+            }
+            if (offset) {
+                [dict setObject:@(offset) forKey:@"offset"];
+            }
+            
+        }
+        [rs close];
+        dispatch_semaphore_signal(sem); //信号量+1
+    }];
+    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);//阻塞等待 信号量-1
     return dict;
 }
 @end

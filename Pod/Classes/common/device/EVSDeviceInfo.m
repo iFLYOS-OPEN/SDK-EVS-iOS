@@ -11,8 +11,8 @@
 #import "EVSHeader.h"
 #define FLAG @"com.iflyos.evs"
 
-#define k_CLIENT_ID @"client_id"
-#define k_DEVICE_ID @"device_id"
+#define k_CLIENT_ID @"evs_client_id"
+#define k_DEVICE_ID @"evs_device_id"
 
 @interface EVSDeviceInfo()
 @property(copy,nonatomic) NSString *mDeviceId;

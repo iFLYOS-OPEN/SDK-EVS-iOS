@@ -89,6 +89,10 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) setVolume:(float) volume;
 //设置TTS音量(0~1)
 -(void) setTTSVolume:(float) volume;
+
+//视频回调
+-(void) videoreadyToPlay;
+-(void) videoPlayEnd;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -60,6 +60,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface EVSContextAppActionModel : EVSContextVersionProtocolModel
+@property(copy,nonatomic) NSString *foreground_app;//当前前景运行的app的包名
+@property(copy,nonatomic) NSString *activity;//当前正在前景运行的页面名称
+@end
+
+@interface EVSContextVideoPlayerModel : EVSContextVersionProtocolModel
+@property(copy,nonatomic) NSString *state;//视频播放器状态（IDLE：未运行，PLAYING:播放中，PAUSED：暂停中）
+@property(copy,nonatomic) NSString *resource_id;//内容ID
+@property(assign,nonatomic) long offset;//进度
+@end
+
 @interface EVSContextProtocolModel : NSObject
 @property(strong,nonatomic) EVSContextSystemProtocolModel *system;
 @property(strong,nonatomic) EVSContextRecognizerProtocolModel *recognizer;
@@ -69,6 +80,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(strong,nonatomic) EVSContextScreenProtocolModel *screen;
 @property(strong,nonatomic) EVSContextInterceptorProtocolModel *interceptor;
 @property(strong,nonatomic) EVSPlaybackControllerProtocolModel *playback_controller;
+@property(strong,nonatomic) EVSContextAppActionModel *app_action;
+@property(strong,nonatomic) EVSContextVideoPlayerModel *video_player;
 //获取header json字典
 +(NSDictionary *) getJSON;
 @end

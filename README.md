@@ -74,15 +74,13 @@
     #import <EvsSDKForiOS/EvsSDKForiOS.h>
     ```
 
-    
-
   - cocoapods 
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.0.0'
+    pod 'SDK-EVS-iOS','~> 1.0.1'
     ```
-  
+
 
   # 要求
 
@@ -130,11 +128,26 @@
 
   
 
-  ### 播放器
+  ### 音频播放器
 
   - AudioInput.h（音频输入）
+
   - AudioOutput.h（音频输出）
+
   - AudioOutputQueue.h（音频播放队列）
+
+    
+
+
+ ### 视频播放器
+  - EVSVideoPlayerDelegate.h(视频回调协议)
+  - EVSVideoPlayerManager.h(视频管理器)
+
+注意：
+
+> 目前使用的是ffmpeg demo版本的lisence,如果要去掉水印，请根据协议替换视频播放器或使用授权的FFmpeg lisence。
+>
+> 设置lisence方法：[AVPLicense register:@"<ffmpeg lisence>"];
 
   
 
@@ -251,7 +264,68 @@
 | ----- | ------ | ----------- | -------------------------------- |
 | token | string | 自定义token | 手工设置token后，需要重新连接EVS |
 
-  
+  #### 17.设置getToken
+
+返回参数
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| token | string |  | 获取evs access Token |
+
+  #### 18.getAuthorization
+
+返回参数
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| authorization | string |  | 获取evs Authorization |
+
+ #### 视频管理器
+
+  #### EVSVideoPlayerManager<EVSVideoPlayerDelegate>
+
+  #### 1.创建视频窗口createVideoPlayer:offset:resource_id
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| frame | CGRect | 视图大小 |  |
+| url | String | 视频资源url |  |
+| offset | long | 时间点 |  |
+| resource_id | String | 资源ID |  |
+
+#### 2.播放新资源play:offset:resource_id
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| url | String | 视频资源url |  |
+| offset | long | 时间点 |  |
+| resource_id | String | 资源ID |  |
+
+#### 3.暂停pause
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| - | - | - | - |
+
+#### 4.恢复resume
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| - | - | - | - |
+
+#### 5.播放play:offset:
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| offset | long | 时间点 |  |
+
+#### 6.播放play
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| - | - | - | - |
+
+#### 7.全屏模式setNewOrientation:
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| fullscreen | Bool | 是否全屏 |  |
+
+#### 8.清除资源clean
+| 参数  | 类型   | 说明        | 备注                             |
+| ----- | ------ | ----------- | -------------------------------- |
+| - | - | - | - |
 
   #### 回调
 
@@ -272,5 +346,5 @@
 
   # 开源协议
   [Apache License 2.0](https://github.com/iFLYOS-OPEN/SDK-EVS-iOS/blob/master/LICENSE)
-  
+
   [iFLYOS开放平台服务协议](https://doc.iflyos.cn/device/development_agreement.html#概述)

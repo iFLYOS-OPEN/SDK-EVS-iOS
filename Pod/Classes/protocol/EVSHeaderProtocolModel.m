@@ -86,7 +86,7 @@
 
 @implementation EVSHeaderDevicePlatformProtocalModel
 -(NSString *) name{
-    return @"iOS";
+    return @"ios";
 }
 
 -(NSString *) version{

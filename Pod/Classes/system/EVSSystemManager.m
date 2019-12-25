@@ -15,6 +15,8 @@
 @property (nonatomic,strong) NSTimer *timer;
 //秒数
 @property (nonatomic,assign) float second;
+//是否第一次打开
+@property (nonatomic,assign) BOOL isFirstOpen;
 @end
 
 @implementation EVSSystemManager
@@ -30,6 +32,14 @@
     return shareInstance;
 }
 
+-(id) init{
+    if (self == [super init]) {
+        self.isFirstOpen = YES;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(volumeChanged:) name:@"AVSystemController_SystemVolumeDidChangeNotification" object:nil];
+    }
+    return self;
+}
+
 +(void) exception:(NSString *)type code:(NSString *)code message:(NSString *)message{
     EVSSystemException *exception = [[EVSSystemException alloc] init];
     exception.iflyos_request.payload.type = type;
@@ -42,14 +52,27 @@
 /**
  *  同步状态
  */
-+(void) stateSync{
+-(void) stateSync{
     dispatch_queue_t queue =  dispatch_queue_create("system.state_sync", DISPATCH_QUEUE_SERIAL);
     dispatch_async(queue, ^{
         //同步状态
         EVSSystemStateSync *systemStateSync = [[EVSSystemStateSync alloc] init];
         NSDictionary *dict = [systemStateSync getJSON];
         [[EVSWebscoketManager shareInstance] sendDict:dict];
+        self.second = 0.0f;
     });
+}
+
+-(void)volumeChanged:(NSNotification *)notification{
+    float volume = [[[notification userInfo] objectForKey:@"AVSystemController_AudioVolumeNotificationParameter"] floatValue];
+    NSInteger systemVolume = volume * 100;
+    if (systemVolume > 0 && !self.isFirstOpen){
+        NSLog(@"EVS-系统音量:%f", systemVolume);
+        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+        [[EVSSqliteManager shareInstance] update:@{@"speaker_volume":@(systemVolume)} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+        [self stateSync];
+    }
+    self.isFirstOpen = NO;
 }
 
 /**
@@ -61,7 +84,7 @@
         
         //15分钟同步一次
         if (self.second == (60.0f * 15)) {
-            [EVSSystemManager stateSync];
+            [[EVSSystemManager shareInstance] stateSync];
             self.second = 0.0f;
         }
 //        EVSLog(@"-----------------EVS system review %f-------------------",self.second);

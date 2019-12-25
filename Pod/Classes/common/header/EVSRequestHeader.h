@@ -8,10 +8,11 @@
 
 #ifndef EVSRequestHeader_h
 #define EVSRequestHeader_h
-
+#import "EVSResponseModel.h"
 #import "EVSRecognizer.h"
 #import "EVSAudioPlayer.h"
 #import "EVSAudioPlayerTTS.h"
 #import "EVSSystemException.h"
 #import "EVSSystemStateSync.h"
+#import "EVSAppActionCheckResult.h"
 #endif /* EVSRequestHeader_h */

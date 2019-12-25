@@ -17,7 +17,7 @@ typedef NS_ENUM(NSInteger, EVSFocusStatus) {
 NS_ASSUME_NONNULL_BEGIN
 
 @interface AudioOutputModel : NSObject
-@property(nonatomic,copy) NSString *type; //播放器类型，取值：- TTS: 语音回复- PLAYBACK: 音频播放器，常见于播放内容- RING: 铃声，常见于闹钟
+@property(nonatomic,copy) NSString *type; //播放器类型，取值：- TTS: 语音回复- PLAYBACK: 音频播放器，常见于播放内容- RING: 铃声，常见于闹钟 video:视频
 //@property(nonatomic,copy) NSString *request_id; //请求ID
 @property(nonatomic,copy) NSString *command_id; //指令id
 @property(nonatomic,copy) NSString *resource_id; //资源ID

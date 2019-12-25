@@ -56,7 +56,7 @@
         NSDictionary *contextDict = [[EVSSqliteManager shareInstance] asynQueryContext:deviceId tableName:CONTEXT_TABLE_NAME];
         if (contextDict) {
             id playback_resource_id = contextDict[@"playback_resource_id"];
-            if (playback_resource_id) {
+            if (playback_resource_id && ![playback_resource_id isEqualToString:@""]) {
                 self.resource_id = playback_resource_id;
             }
         }
@@ -99,4 +99,62 @@
     }
     return _iflyos_request;
 }
+@end
+
+@implementation EVSVideoPlayerProgressSync
+-(EVSVideoPlayerProgressSyncRequest *) iflyos_request{
+    if (!_iflyos_request) {
+        _iflyos_request = [[EVSVideoPlayerProgressSyncRequest alloc] init];
+    }
+    return _iflyos_request;
+}
+@end
+
+@implementation EVSVideoPlayerProgressSyncRequest
+-(EVSVideoPlayerProgressSyncRequestPayload *) payload{
+    if (!_payload) {
+        _payload = [[EVSVideoPlayerProgressSyncRequestPayload alloc] init];
+    }
+    return _payload;
+}
+
+-(EVSVideoPlayerProgressSyncRequestHeader *) header{
+    if (!_header) {
+        _header = [[EVSVideoPlayerProgressSyncRequestHeader alloc] init];
+    }
+    return _header;
+}
+
+@end
+
+@implementation EVSVideoPlayerProgressSyncRequestPayload
+-(id) init{
+    if (self == [super init]) {
+        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+        NSDictionary *videoPlayerDict = [[EVSSqliteManager shareInstance] asynQueryVideoPlayer:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+        if (videoPlayerDict) {
+            id resource_id = videoPlayerDict[@"resource_id"];
+            if (resource_id) {
+                self.resource_id = resource_id;
+            }
+            id offset = videoPlayerDict[@"offset"];
+            if (offset) {
+                self.offset = [offset longValue];
+            }
+        }
+    }
+    return self;
+}
+@end
+
+@implementation EVSVideoPlayerProgressSyncRequestHeader
+
+-(NSString *) name{
+    return @"video_player.progress_sync";
+}
+
+-(NSString *) request_id{
+    return [NSString requestIdWithAuto];
+}
+
 @end

@@ -21,7 +21,7 @@
 #import "EVS+EVSFocusManager.h"
 #import "EVSWebscoketManager.h"
 #import "EVSLocationManager.h"
-#import "IFLYOSHTTPRequest.h"
+#import "EVSHTTPRequest.h"
 #import "EVSDeviceInfo.h"
 #import "EVSApplication.h"
 #import "EVSSqliteManager.h"
@@ -35,6 +35,7 @@
 #import <SocketRocket/SocketRocket.h>
 #import <WebViewJavascriptBridge/WebViewJavascriptBridge.h>
 #import <fmdb/FMDB.h>
+#import <AVPlayerTouch/AVPlayerTouch.h>
 
 #import "EVSHeaderProtocolModel.h"
 #import "EVSContextProtocolModel.h"
@@ -73,13 +74,14 @@
 #define HEADER_TABLE_NAME @"t_evs_header"
 #define CONTEXT_TABLE_NAME @"t_evs_context"
 #define SYSTEM_TABLE_NAME @"t_evs_system"
+#define VIDEO_PLAYER_TABLE_NAME @"t_evs_video_player"
 /*****************************地址配置end********************************/
-#define k_ACCESS_TOKEN @"access_token"
-#define k_TOKEN_TYPE @"token_type"
-#define k_REFRESH_TOKEN @"refresh_token"
-#define k_EXPIRES_IN @"expires_in"
-#define k_CREATED_AT @"created_at"
-#define k_AUTHORIZATION @"authorization"
+#define k_ACCESS_TOKEN @"evs_access_token"
+#define k_TOKEN_TYPE @"evs_token_type"
+#define k_REFRESH_TOKEN @"evs_refresh_token"
+#define k_EXPIRES_IN @"evs_expires_in"
+#define k_CREATED_AT @"evs_created_at"
+#define k_AUTHORIZATION @"evs_authorization"
 
 #define k_NOTIFICATION_WS_STATE @"notificationWsState"//全局通知
 /***********************************回调*************************************/
@@ -114,11 +116,17 @@
 #define recognizer_stop_capture @"recognizer.stop_capture" //结束录音
 #define recognizer_expect_reply @"recognizer.expect_reply" //追问
 #define audio_player_audio_out @"audio_player.audio_out" //音频播放
+#define video_player_video_out @"video_player.video_out" //视频播放
 #define audio_player_audio_out_tts @"audio_player.audio_out.tts" //tts音频播放
 #define speaker_set_volume @"speaker.set_volume" //设置音量
 #define system_ping @"system.ping" //同步心跳包（同步时间）
 #define system_error @"system.error" //错误提示
 #define system_revoke_authorization @"system.revoke_authorization" //授权无效
+#define app_action_check @"app_action.check" //app action
+#define app_action_check_excute @"app_action.execute" //app action excute
+#define app_action_check_excute_fail @"app_action.execute_failed" //app action failed
+#define app_action_check_excute_success @"app_action.execute_succeed" //app action succeed
+#define app_action_check_result @"app_action.check_result" //请求回调
 
 #ifdef DEBUG
 #define EVSLog(...) NSLog(@"EVS SDK ^_^: %@\n", [NSString stringWithFormat:__VA_ARGS__])

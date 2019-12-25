@@ -8,7 +8,7 @@
 
 #import "EVSAuthManager.h"
 #import "EVSHeader.h"
-#import "EVSAuthViewController.h"
+
 #import "EVSRequestHeader.h"
 @implementation EVSAuthManager
 /**
@@ -45,11 +45,11 @@
     NSString *encodedValue = [urlContext stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
     EVSLog(@"auth url : %@",encodedValue);
     //加载列表逻辑
-    IFLYOSHTTPRequest *request = [[IFLYOSHTTPRequest alloc] init];
+    EVSHTTPRequest *request = [[EVSHTTPRequest alloc] init];
     request.dataModel.contextUrl = encodedValue;
     request.dataModel.requestType = POST;
     request.dataModel.headers = header;
-    [request request:^(IFLYOSDataModel * _Nonnull successDataModel) {
+    [request request:^(EVSDataModel * _Nonnull successDataModel) {
         EVSLog(@"auth request statusCode: %li",successDataModel.statusCode);
         NSDictionary *dict = successDataModel.resultDataDictionary;
         if (dict) {
@@ -57,8 +57,11 @@
             [self authDevice:userCodeModel];
             [self authToken:clientId device_code:userCodeModel.device_code];
         }
-    } progress:nil error:^(IFLYOSDataModel * _Nonnull failDataModel) {
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+    } progress:nil error:^(EVSDataModel * _Nonnull failDataModel) {
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:isAuth:errorCode:error::)]){
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+        }
+        
         EVSLog(@"auth request statusCode: %li",failDataModel.statusCode);
     } newServerAddress:@""];
 }
@@ -75,15 +78,9 @@
     EVSLog(@"auth url : %@",authUrl);
     
     if (authUrl) {
-        UIViewController *topController = [EVSApplication presentingVC];
-        
-        EVSAuthViewController *authVc = [[EVSAuthViewController alloc] init];
-        authVc.authUrl = authUrl;
-        
-        UINavigationController *navigationVc = [[UINavigationController alloc] initWithRootViewController:authVc];
-        [topController presentViewController:navigationVc animated:YES completion:^{
-            
-        }];
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:authURL:)]) {
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] authURL:authUrl];
+        }
     }
 }
 
@@ -109,11 +106,11 @@
             }
             __weak typeof(self) weakSelf = self;
             //加载列表逻辑
-            IFLYOSHTTPRequest *request = [[IFLYOSHTTPRequest alloc] init];
+            EVSHTTPRequest *request = [[EVSHTTPRequest alloc] init];
             request.dataModel.contextUrl = encodedValue;
             request.dataModel.requestType = POST;
             request.dataModel.params = params;
-            [request request:^(IFLYOSDataModel * _Nonnull successDataModel) {
+            [request request:^(EVSDataModel * _Nonnull successDataModel) {
                 EVSLog(@"auth success statusCode: %li",successDataModel.statusCode);
                 NSDictionary *dict = successDataModel.resultDataDictionary;
                 if (dict) {
@@ -121,9 +118,12 @@
                     [authModel save];
                     [self connectEVS];
                     self.isStopLoop = YES;
-                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:YES errorCode:0 error:nil];
+                    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:isAuth:errorCode:error:)]){
+                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:YES errorCode:0 error:nil];
+                    }
+                    
                 }
-            } progress:nil error:^(IFLYOSDataModel * _Nonnull failDataModel) {
+            } progress:nil error:^(EVSDataModel * _Nonnull failDataModel) {
                 NSDictionary *dict = failDataModel.resultDataDictionary;
                 if(dict){
                     NSString *error = dict[@"error"];
@@ -133,10 +133,16 @@
                        
                     }else if ([error isEqualToString:@"expired_token"]){
                         //授权码过期，用户仍未授权
-                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+                        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:isAuth:errorCode:error:)]){
+                            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+                        }
+                        
                     }else if ([error isEqualToString:@"access_denied"]){
                         //用户拒绝授权
-                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+                        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:isAuth:errorCode:error:)]){
+                            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] isAuth:NO errorCode:failDataModel.statusCode error:failDataModel.error];
+                        }
+                        
                     }
                     EVSLog(@"auth waiting statusCode: %li code:%@",failDataModel.statusCode,error);
                 }
@@ -190,11 +196,11 @@
         }
         
         //重新刷新token
-        IFLYOSHTTPRequest *request = [[IFLYOSHTTPRequest alloc] init];
+        EVSHTTPRequest *request = [[EVSHTTPRequest alloc] init];
         request.dataModel.contextUrl = encodedValue;
         request.dataModel.requestType = POST;
         request.dataModel.params = params;
-        IFLYOSDataModel *dataModel = [request synRequest];
+        EVSDataModel *dataModel = [request synRequest];
         if (dataModel.statusCode == REQUEST_SUCCESS_CODE && dataModel.resultDataDictionary) {
             EVSLog(@"refresh token success ...");
             NSDictionary *dict = dataModel.resultDataDictionary;

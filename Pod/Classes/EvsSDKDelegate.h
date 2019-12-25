@@ -19,10 +19,19 @@ typedef NS_ENUM(NSInteger, EVSSessionState) {
     LISTENING = 1, //录音中
     THINKING = 2, //响应中
     SPEAKING = 3, //播放中
-    FINISHED = 4 //播放完毕
+    FINISHED = 4, //播放完毕
+    MEDIA_START = 5, //音乐播放中
+    MEDIA_STOP = 6 //音乐停止
 };
 
 @protocol EvsSDKDelegate <NSObject>
+
+/**
+ *  EVS授权回调URL
+ *  authURL:授权URL
+ */
+-(void) evs:(EvsSDKForiOS *) evsSDK authURL:(NSString *)authURL;
+
 /**
  *  EVS授权状态回调
  *  isAuth:是否授权成功
@@ -67,6 +76,13 @@ typedef NS_ENUM(NSInteger, EVSSessionState) {
  *  progress :  播放进度（百分比）
  */
 -(void) evs:(EvsSDKForiOS *) evsSDK progress:(float) progress;
+
+/**
+ *  EVS当前播放器播放时间
+ *  current :  当前时间
+ *  total :  总时间
+ */
+-(void) evs:(EvsSDKForiOS *) evsSDK current:(float) current total:(float) total;
 
 /**
  *  EVS 对话状态
