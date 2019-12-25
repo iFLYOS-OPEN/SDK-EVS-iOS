@@ -88,6 +88,7 @@
             [self playWithViedeoUrl:url];
             // 初始化播放器图层对象
             [self initAVPlayerLayer:view frame:frame];
+        [self play];
         #endif
 
     }
