@@ -11,8 +11,7 @@
 #define SCREEN_HEIGHT ([[UIScreen mainScreen] bounds].size.height)
 #define SCREEN_WIDTH ([[UIScreen mainScreen] bounds].size.width)
 
-#define isCustomPlayerModel YES//第三方播放器模式
-@interface EVSVideoPlayerManager()<FFAVPlayerControllerDelegate>
+@interface EVSVideoPlayerManager()
 @property (nonatomic,strong) AVPlayer *player;
 @property (nonatomic,strong) AVPlayerLayer *playerLayer;
 @property (nonatomic,strong) AVPlayerItem *playerItem;
@@ -25,11 +24,14 @@
 
 //是否重复提交NEARLY_FINISHED
 @property (assign,atomic) BOOL nearlyFinishedSended;
+#if isCustomPlayerModel
 @property (nonatomic,strong) FFAVPlayerController *ffavPlayer;
+#endif
 @property (nonatomic,strong) UIView *drawView;
 @end
 
 @implementation EVSVideoPlayerManager
+#if isCustomPlayerModel
 -(FFAVPlayerController *) ffavPlayer{
     if (!_ffavPlayer) {
         _ffavPlayer = [[FFAVPlayerController alloc] init];
@@ -38,7 +40,7 @@
     }
     return _ffavPlayer;
 }
-
+#endif
 -(UIView *) drawView{
     if(!_drawView){
         _drawView = [[UIView alloc] init];
@@ -76,17 +78,18 @@
     self.frame = frame;
     self.targetView = view;
     if (url) {
-        if (isCustomPlayerModel) {
-            NSURL *urlObj = [NSURL URLWithString:url];
-            if (urlObj) {
-                [self.ffavPlayer openMedia:urlObj withOptions:nil];
-            }
-        }else{
+        #if isCustomPlayerModel
+                  NSURL *urlObj = [NSURL URLWithString:url];
+                  if (urlObj) {
+                      [self.ffavPlayer openMedia:urlObj withOptions:nil];
+                  }
+        #else
             // 设置视频数据
             [self playWithViedeoUrl:url];
             // 初始化播放器图层对象
             [self initAVPlayerLayer:view frame:frame];
-        }
+        #endif
+
     }
 }
 
@@ -105,38 +108,39 @@
     }
         if (url) {
             self.nearlyFinishedSended = NO;
-            if (isCustomPlayerModel) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    NSURL *urlObj = [NSURL URLWithString:url];
-                    if (urlObj) {
-                        [self.ffavPlayer stop];
-                        self.ffavPlayer = nil;
-                        [self.ffavPlayer openMedia:urlObj withOptions:nil];
+            #if isCustomPlayerModel
+            dispatch_async(dispatch_get_main_queue(), ^{
+                NSURL *urlObj = [NSURL URLWithString:url];
+                if (urlObj) {
+                    [self.ffavPlayer stop];
+                    self.ffavPlayer = nil;
+                    [self.ffavPlayer openMedia:urlObj withOptions:nil];
+                }
+            });
+            #else
+            [self removeObserver];
+            self.playerItem = [self getPlayItemWithUrl:url];
+            [self.player replaceCurrentItemWithPlayerItem:self.playerItem];
+             // 添加播放进度监听
+               [self addProgressObserver];
+               // 添加播放内容KVO监听
+               [self addPlayerItemObserver];
+               // 添加通知中心监听播放完成
+               [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contextPlayFinished:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
+            
+            if (offset == 0) {
+                        [self.player play];
+                    }else{
+            //            int32_t timeScale = self.player.currentItem.asset.duration.timescale;
+            //            float process = (float)(time/1000.0);
+            //            CMTime time = CMTimeMakeWithSeconds(process, timeScale);
+            //            [self.player seekToTime:time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+                        NSTimeInterval time = (offset / 1000);
+                        [self.player seekToTime:CMTimeMake(time, 1)];
+                        [self.player play];
                     }
-                });
-            }else{
-                [self removeObserver];
-                self.playerItem = [self getPlayItemWithUrl:url];
-                [self.player replaceCurrentItemWithPlayerItem:self.playerItem];
-                 // 添加播放进度监听
-                   [self addProgressObserver];
-                   // 添加播放内容KVO监听
-                   [self addPlayerItemObserver];
-                   // 添加通知中心监听播放完成
-                   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contextPlayFinished:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
-                
-                if (offset == 0) {
-                            [self.player play];
-                        }else{
-                //            int32_t timeScale = self.player.currentItem.asset.duration.timescale;
-                //            float process = (float)(time/1000.0);
-                //            CMTime time = CMTimeMakeWithSeconds(process, timeScale);
-                //            [self.player seekToTime:time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
-                            NSTimeInterval time = (offset / 1000);
-                            [self.player seekToTime:CMTimeMake(time, 1)];
-                            [self.player play];
-                        }
-            }
+            #endif
+           
         }
 }
 //同步进度
@@ -170,13 +174,13 @@
 }
 //暂停
 -(void) pause{
-    if (isCustomPlayerModel) {
-        [self.ffavPlayer pause];
-    }else{
+    #if isCustomPlayerModel
+              [self.ffavPlayer pause];
+    #else
         if (self.player) {
             [self.player pause];
         }
-    }
+    #endif
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
@@ -188,10 +192,10 @@
 }
 
 -(void) play:(NSTimeInterval) offset{
-    if (isCustomPlayerModel) {
-        NSTimeInterval time = (offset / TIME_ZOOM);
-        [self.ffavPlayer play:time];
-    }else{
+    #if isCustomPlayerModel
+       NSTimeInterval time = (offset / TIME_ZOOM);
+              [self.ffavPlayer play:time];
+    #else
         if (self.player) {
                 NSTimeInterval time = (offset / TIME_ZOOM);
                 [self.player seekToTime:CMTimeMake(time, 1)];
@@ -201,7 +205,7 @@
         //        NSDictionary *progressSyncDict = [progressSync getJSON];
         //        [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
             }
-    }
+    #endif
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_playing,@"offset":@(offset)} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
@@ -210,15 +214,15 @@
 
 //恢复
 -(void) resume{
-    if (isCustomPlayerModel) {
+    #if isCustomPlayerModel
         [self.ffavPlayer resume];
-    }else{
+    #else
         if (self.player) {
             NSTimeInterval time = (self.offset / 1000);
             [self.player seekToTime:CMTimeMake(time, 1)];
             [self.player play];
         }
-    }
+    #endif
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_playing} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
@@ -227,13 +231,13 @@
 
 //播放
 -(void) play{
-    if (isCustomPlayerModel) {
+    #if isCustomPlayerModel
         [self.ffavPlayer play:0];
-    }else{
+    #else
         if (self.player) {
             [self.player play];
         }
-    }
+    #endif
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_playing} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
@@ -246,15 +250,14 @@
 
 //清除
 -(void) clean{
-    if (isCustomPlayerModel){
-//        [AudioSessionManager setOnlyRecord];
-        [self.drawView removeFromSuperview];
-        [self.ffavPlayer stop];
-        self.ffavPlayer = nil;
-        
-        self.targetView = nil;
-        self.delegate = nil;
-    }else{
+    #if isCustomPlayerModel
+         [self.drawView removeFromSuperview];
+               [self.ffavPlayer stop];
+               self.ffavPlayer = nil;
+               
+               self.targetView = nil;
+               self.delegate = nil;
+    #else
         [self.player pause];
         [self.player.currentItem cancelPendingSeeks];
         [self removeObserver];
@@ -264,7 +267,7 @@
         self.playerItem = nil;
         self.playerLayer = nil;
         self.delegate = nil;
-    }
+    #endif
 }
 
 -(void) removeObserver{
@@ -429,7 +432,7 @@
         }];
     }
 }
-
+#if isCustomPlayerModel
 #pragma FFAVMediaPlayerDelegate
 - (void)FFAVPlayerControllerWillLoad:(FFAVPlayerController *)controller{
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -587,4 +590,7 @@
     [EVSSystemManager exception:@"video_out" code:@"1001" message:[NSString stringWithFormat:@"video_out player %@ error loading fail"]];
     [self syncAudioError:@"1001"];
 }
+#else
+   
+#endif
 @end

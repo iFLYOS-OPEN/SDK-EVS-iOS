@@ -71,7 +71,9 @@
         shareInstance = [[self alloc] init];
         [[AudioInput sharedAudioManager] run];
         //使用ffmpeg licence 是demo licence
+#if isCustomPlayerModel
         [AVPLicense register:@"zneaHNCzElTcs6RhLDeJm6UKot04AjDe0zdhXCn1scTsxX5Gwv4jRtvH7dNjnKiZw3L/ANm83F0TTB40xawqFYupmFzs4nklcQaqpLr3Osf4KPy5Jf0c+FdvQqmU6mIohnmsvuP4cgOvfy9quLtFcIqLrKYKmhaJSz93Y1F4dg2QwlNwnYyMmQ7sQYQrjqYyADB3vQ0X1eYEtVODG6XfmF7EMzyN5X8Qr4kt1Vrk1Qg="];
+        #endif
     });
     return shareInstance;
 }
