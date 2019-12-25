@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
 s.name        = "SDK-EVS-iOS"
-s.version     = "1.0.3"
+s.version     = "1.0.4"
 s.authors     = { "jwzhou2" => "jwzhou2@iflytek.com" }
 s.homepage    = "https://github.com/iFLYOS-OPEN/SDK-EVS-iOS"
 s.summary     = "SDK-EVS-iOS."
