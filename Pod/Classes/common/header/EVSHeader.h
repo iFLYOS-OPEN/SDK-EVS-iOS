@@ -9,7 +9,7 @@
 #ifndef EVSHeader_h
 #define EVSHeader_h
 /*****************************头文件********************************/
-#define isCustomPlayerModel NO//第三方播放器模式
+#define isCustomPlayerModel 0//第三方播放器模式
 
 #import "EvsSDKForiOS.h"
 #import "EVSColorUtils.h"

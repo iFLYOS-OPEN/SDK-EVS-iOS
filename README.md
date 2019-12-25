@@ -78,7 +78,7 @@
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.0.6'
+    pod 'SDK-EVS-iOS','~> 1.0.7'
     ```
 
 
@@ -145,6 +145,8 @@
 
 注意：
 
+> 若要使用第三方视频播放器，则设置isCustomPlayerModel宏为1，且导入AVPlayerTouch.a静态库
+>
 > GitHub:https://github.com/imoreapps/ffmpeg-avplayer-for-ios-tvos.git(静态库请自行编译使用)
 >
 > 目前使用的是ffmpeg demo版本的lisence,如果要去掉水印，请根据协议替换视频播放器或使用授权的FFmpeg lisence。
