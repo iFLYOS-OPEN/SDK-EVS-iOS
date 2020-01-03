@@ -64,8 +64,27 @@
     [dateformatter setDateFormat:@"YYYY-MM-dd HH:mm:ss:SSS"];
     NSString *  locationString=[dateformatter stringFromDate:senddate];
     NSDate * now = [dateformatter dateFromString:locationString];
+    NSDate *localNow = [self getLocalDateFormatAnyDate:now];
     //转成时间戳
-    NSString *timeSp = [NSString stringWithFormat:@"%ld", (long)[now timeIntervalSince1970]];
+    NSString *timeSp = [NSString stringWithFormat:@"%ld", (long)[localNow timeIntervalSince1970]];
     return timeSp;
 }
+
+/**
+ anyDate 转成 本地时区的 NSDate
+ */
++ (NSDate *)getLocalDateFormatAnyDate:(NSDate *)anyDate {
+    NSTimeZone *sourceTimeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];//或GMT
+    NSTimeZone *desTimeZone = [NSTimeZone localTimeZone];
+    //得到源日期与世界标准时间的偏移量
+    NSInteger sourceGMTOffset = [sourceTimeZone secondsFromGMTForDate:anyDate];
+    //目标日期与本地时区的偏移量
+    NSInteger destinationGMTOffset = [desTimeZone secondsFromGMTForDate:anyDate];
+    //得到时间偏移量的差值
+    NSTimeInterval interval = destinationGMTOffset - sourceGMTOffset;
+    //转为现在时间
+    NSDate* destinationDateNow = [[NSDate alloc] initWithTimeInterval:interval sinceDate:anyDate];
+    return destinationDateNow;
+}
+
 @end

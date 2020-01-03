@@ -251,6 +251,13 @@
 
 //清除
 -(void) clean{
+    //同步状态
+    EVSVideoPlayerProgressSync *videoProgressSync = [[EVSVideoPlayerProgressSync alloc] init];
+    videoProgressSync.iflyos_request.payload.type = @"FINISHED";
+    videoProgressSync.iflyos_request.payload.resource_id = self.resource_id;
+    videoProgressSync.iflyos_request.payload.offset = self.offset;
+    NSDictionary *videoProgressSyncDict = [videoProgressSync getJSON];
+    [[EVSWebscoketManager shareInstance] sendDict:videoProgressSyncDict];
     #if isCustomPlayerModel
          [self.drawView removeFromSuperview];
                [self.ffavPlayer stop];

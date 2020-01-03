@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <MediaPlayer/MediaPlayer.h>
+#import "EvsSDKDelegate.h"
 NS_ASSUME_NONNULL_BEGIN
 
 @interface EVSApplication : NSObject
@@ -16,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 +(instancetype) shareInstance;
 @property(nonatomic,strong) MPVolumeView *volumeView;
+@property(nonatomic,assign,readonly) EVSSessionState sessionState;
 //获取到当前所在的视图
 + (UIViewController *)presentingVC;
 /*
@@ -36,6 +38,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)checkMuted;
 - (void)playbackComplete;
 -(BOOL)silenced;
+
+/**
+ *  设置对话状态
+ */
+-(void) setEVSSessionState:(EVSSessionState) sessionState;
 @end
 
 NS_ASSUME_NONNULL_END

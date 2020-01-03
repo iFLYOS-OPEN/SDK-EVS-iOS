@@ -289,6 +289,8 @@
     }else{
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
             [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:MEDIA_START];
+            [[EVSApplication shareInstance] setEVSSessionState:MEDIA_START];
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
         }
         [self.delegate contextChannelStart:self.queue useModel:model];
         NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
@@ -356,8 +358,9 @@
     }else{
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
             [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:MEDIA_STOP];
+            [[EVSApplication shareInstance] setEVSSessionState:MEDIA_STOP];
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
         }
-        
         [self removeAudioQueue:model];//播放完毕就移除
         [self removeUpcomingQueue:model];//移除即将播放列表
         
@@ -390,8 +393,9 @@
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"session_status":@"FINISHED"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             }
+            [[EVSApplication shareInstance] setEVSSessionState:FINISHED];
             if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:FINISHED];
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
             }
         }
         
@@ -495,7 +499,7 @@
             videoProgressSync.iflyos_request.payload.resource_id = model.resource_id;
             videoProgressSync.iflyos_request.payload.offset = model.offset;
             NSDictionary *videoProgressSyncDict = [videoProgressSync getJSON];
-            [[EVSWebscoketManager shareInstance] sendDict:videoProgressSync];
+            [[EVSWebscoketManager shareInstance] sendDict:videoProgressSyncDict];
         }
     });
 }
