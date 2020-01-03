@@ -177,7 +177,7 @@
     //计算时效性
     EVSAuthModel *authModel = [EVSAuthModel loadModel];
     long long expiresCostTimeSp = (authModel.created_at + authModel.expires_in);
-    long long nowTimeSp = [[EVSDateUtils dateConversionTimestamp:[NSDate date]] longLongValue];
+    long long nowTimeSp = [[EVSDateUtils getNowTimeTimestamp] longLongValue];
     
     if(!authModel.refresh_token){
         return;

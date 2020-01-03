@@ -350,12 +350,20 @@
                             NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
                             NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
                             if ([control isEqualToString:@"PAUSE"]) {
+                                [[EVSApplication shareInstance] setEVSSessionState:FINISHED];
+                                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                                }
                                 //暂停
                                 if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(pause)]) {
                                     [[EVSVideoPlayerManager shareInstance].delegate pause];
                                 }
                                 [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
                             }else if ([control isEqualToString:@"resume"]) {
+                                [[EVSApplication shareInstance] setEVSSessionState:MEDIA_START];
+                                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                                }
                                 //继续
                                 if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(play)]) {
                                     [[EVSVideoPlayerManager shareInstance].delegate play];
@@ -372,6 +380,10 @@
                                 NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
                                 NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
                                 if ([control isEqualToString:@"PAUSE"]) {
+                                    [[EVSApplication shareInstance] setEVSSessionState:FINISHED];
+                                    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                                    }
                                     //暂停
                                     [self.output pause];
                                     [audioOutDict setObject:playback_state_paused forKey:@"playback_state"];
@@ -387,7 +399,11 @@
                                     }
                                 }else if ([control isEqualToString:@"RESUME"]) {
                                     //继续
-                                    
+                                    [self.output resumeLocalPlay];
+                                    [[EVSApplication shareInstance] setEVSSessionState:MEDIA_START];
+                                    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                                        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                                    }
                                 }
                             }
                         }
@@ -416,7 +432,12 @@
                         [[EVSWebscoketManager shareInstance] sendStr:COMMAND_END];
                     }else if ([payloadItem.header.name isEqualToString:recognizer_intermediate_text]) {
                         EVSLog(@"****************** recognizer.intermediate_text ******************");
-                        
+                        if(payloadItem.payload.is_last){
+                            [[EVSApplication shareInstance] setEVSSessionState:THINKING];
+                            if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                            }
+                        }
                     }else if ([payloadItem.header.name isEqualToString:system_revoke_authorization]) {
                         EVSLog(@"****************** system.revoke_authorization ******************");
                         [[EVSWebscoketManager shareInstance] sendStr:COMMAND_END];
@@ -525,9 +546,13 @@
         }
     }
     if (self.queue.count == 0) {
+        [[EVSApplication shareInstance] setEVSSessionState:IDLE];
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
         }
+//        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+//            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+//        }
         
         NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
         if (deviceId) {
@@ -559,9 +584,13 @@
         if (deviceId) {
             [[EVSSqliteManager shareInstance] update:@{@"session_status":playback_state_idle} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
         }
+        [[EVSApplication shareInstance] setEVSSessionState:IDLE];
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
         }
+//        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+//            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+//        }
     }
 }
 

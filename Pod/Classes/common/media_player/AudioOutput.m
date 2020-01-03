@@ -298,7 +298,7 @@
         
         //回调进度
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)] && !isnan(duration)) {
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:0 total:duration];
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:0 total:duration*TIME_ZOOM];
         }
         if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
             [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:0];
@@ -318,10 +318,10 @@
                 if (deviceId) {
                     [[EVSSqliteManager shareInstance] update:@{@"session_status":@"SPEAKING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
                 }
-                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:SPEAKING];
-                }
-               
+               [[EVSApplication shareInstance] setEVSSessionState:SPEAKING];
+               if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                   [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+               }
                 if ([playerName isEqualToString:@"context.player"]) {
                     [self.delegate audioOutputContextChannelStart:self model:self.contextModel];
                 }else if([playerName isEqualToString:@"tts.player"]){

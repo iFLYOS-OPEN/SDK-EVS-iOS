@@ -20,6 +20,12 @@ NS_ASSUME_NONNULL_BEGIN
  *  data: 日期时间
  */
 +(NSString *) dateConversionTimestamp:(NSDate *) data;
+
+
+/**
+ anyDate 转成 本地时区的 NSDate
+ */
++ (NSDate *)getLocalDateFormatAnyDate:(NSDate *)anyDate ;
 @end
 
 NS_ASSUME_NONNULL_END

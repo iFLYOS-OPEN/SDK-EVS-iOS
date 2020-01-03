@@ -17,6 +17,7 @@ static CFTimeInterval startPlayTime;
     float soundDuration;
     NSTimer *playbackTimer;
     BOOL isMute;//是否静音
+    EVSSessionState currentState;
 }
 @end
 
@@ -44,6 +45,10 @@ static void PlaySoundCompletionBlock(SystemSoundID SSID, void *clientData) {
         [window addSubview:shareInstance.volumeView];
     });
     return shareInstance;
+}
+
+-(EVSSessionState) sessionState{
+    return currentState;
 }
 
 //获取到当前所在的视图
@@ -191,4 +196,89 @@ static void soundCompletionCallback (SystemSoundID mySSID, void* myself) {
     [self detectMuteSwitch];
 }
 
+
+/**
+ *  设置对话状态
+ */
+-(void) setEVSSessionState:(EVSSessionState) sessionState{
+    currentState = [self changeState:sessionState];
+}
+
+-(EVSSessionState) changeState:(EVSSessionState) changeState{
+    if(currentState == LISTENING && changeState == IDLE){
+        return IDLE;
+    }else if(currentState == LISTENING && changeState == SPEAKING){
+        return LISTENING;
+    }else if(currentState == LISTENING && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == LISTENING && changeState == FINISHED){
+        return LISTENING;
+    }else if(currentState == LISTENING && changeState == MEDIA_START){
+        return LISTENING;
+    }else if(currentState == LISTENING && changeState == MEDIA_STOP){
+        return LISTENING;
+    }else if(currentState == SPEAKING && changeState == IDLE){
+        return SPEAKING;
+    }else if(currentState == SPEAKING && changeState == SPEAKING){
+        return SPEAKING;
+    }else if(currentState == SPEAKING && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == SPEAKING && changeState == FINISHED){
+        return FINISHED;
+    }else if(currentState == SPEAKING && changeState == MEDIA_START){
+        return SPEAKING;
+    }else if(currentState == SPEAKING && changeState == MEDIA_STOP){
+        return SPEAKING;
+    }else if(currentState == THINKING && changeState == IDLE){
+        return IDLE;
+    }else if(currentState == THINKING && changeState == SPEAKING){
+        return SPEAKING;
+    }else if(currentState == THINKING && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == THINKING && changeState == FINISHED){
+        return FINISHED;
+    }else if(currentState == THINKING && changeState == MEDIA_START){
+        return MEDIA_START;
+    }else if(currentState == THINKING && changeState == MEDIA_STOP){
+        return MEDIA_STOP;
+    }else if(currentState == FINISHED && changeState == IDLE){
+        return IDLE;
+    }else if(currentState == FINISHED && changeState == SPEAKING){
+        return SPEAKING;
+    }else if(currentState == FINISHED && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == FINISHED && changeState == FINISHED){
+        return FINISHED;
+    }else if(currentState == FINISHED && changeState == MEDIA_START){
+        return MEDIA_START;
+    }else if(currentState == FINISHED && changeState == MEDIA_STOP){
+        return MEDIA_STOP;
+    }else if(currentState == MEDIA_START && changeState == IDLE){
+        return MEDIA_START;
+    }else if(currentState == MEDIA_START && changeState == SPEAKING){
+        return SPEAKING;
+    }else if(currentState == MEDIA_START && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == MEDIA_START && changeState == FINISHED){
+        return FINISHED;
+    }else if(currentState == MEDIA_START && changeState == MEDIA_START){
+        return MEDIA_START;
+    }else if(currentState == MEDIA_START && changeState == MEDIA_STOP){
+        return MEDIA_STOP;
+    }else if(currentState == MEDIA_STOP && changeState == IDLE){
+        return MEDIA_STOP;
+    }else if(currentState == MEDIA_STOP && changeState == SPEAKING){
+        return SPEAKING;
+    }else if(currentState == MEDIA_STOP && changeState == THINKING){
+        return THINKING;
+    }else if(currentState == MEDIA_STOP && changeState == FINISHED){
+        return FINISHED;
+    }else if(currentState == MEDIA_STOP && changeState == MEDIA_START){
+        return MEDIA_START;
+    }else if(currentState == MEDIA_STOP && changeState == MEDIA_STOP){
+        return MEDIA_STOP;
+    }else{
+        return changeState;
+    }
+}
 @end

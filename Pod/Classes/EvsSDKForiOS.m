@@ -136,8 +136,9 @@
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             }
+            [[EVSApplication shareInstance] setEVSSessionState:IDLE];
             if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
             }
             
         }else{
@@ -155,10 +156,10 @@
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"session_status":@"IDLE"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
             }
+            [[EVSApplication shareInstance] setEVSSessionState:IDLE];
             if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:IDLE];
+                [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
             }
-            
         }
     }];
     
@@ -370,6 +371,10 @@
         EVSLog(@"EVS is not connected,please connected...");
         return;
     }
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+    if (deviceId) {
+        [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_idle} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+    }
     [self clearAll];
     [self.audioOutput pause];
     [self.audioOutput stopTTS];
@@ -386,6 +391,10 @@
     if (self.state != OPEN) {
         EVSLog(@"EVS is not connected,please connected...");
         return;
+    }
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+    if (deviceId) {
+        [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_idle} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
     }
     [self clearAll];
     [self.audioOutput stop];

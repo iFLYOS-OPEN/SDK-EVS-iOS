@@ -238,8 +238,9 @@ static OSStatus RecordCallback(void *inRefCon,
     checkStatus(status);
     [[AudioOutput shareInstance] setBackgroundVolume2Percent];
     self.openAudioInputStream = YES;
+    [[EVSApplication shareInstance] setEVSSessionState:LISTENING];
     if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:LISTENING];
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
     }
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
@@ -253,8 +254,9 @@ static OSStatus RecordCallback(void *inRefCon,
     checkStatus(status);
     [[AudioOutput shareInstance] resumeBackgroundVolume];
     self.openAudioInputStream = NO;
+    [[EVSApplication shareInstance] setEVSSessionState:IDLE];
     if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:THINKING];
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
     }
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
