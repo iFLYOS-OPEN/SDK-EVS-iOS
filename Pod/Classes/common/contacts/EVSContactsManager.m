@@ -17,7 +17,7 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         shareInstance = [[self alloc] init];
-        [shareInstance create];
+        
     });
     return shareInstance;
 }
