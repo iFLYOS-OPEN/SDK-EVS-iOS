@@ -16,6 +16,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 // 只能播放当前App的声音，其他app的声音会停止，当锁屏或按静音时停止。
 +(void) setOnlyRecord;
+
++(void) setPlayBackAndRecord;
 @end
 
 NS_ASSUME_NONNULL_END

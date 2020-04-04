@@ -9,7 +9,7 @@
 #ifndef EVSHeader_h
 #define EVSHeader_h
 /*****************************头文件********************************/
-#define isCustomPlayerModel 0//第三方播放器模式
+#define isCustomPlayerModel 1//第三方播放器模式
 
 #import "EvsSDKForiOS.h"
 #import "EVSColorUtils.h"
@@ -38,7 +38,8 @@
 #import <WebViewJavascriptBridge/WebViewJavascriptBridge.h>
 #import <fmdb/FMDB.h>
 #if isCustomPlayerModel
-#import "AVPlayerTouch.h"
+//#import "AVPlayerTouch.h"
+#import <PLPlayerKit/PLPlayerKit.h>
 #else
 
 #endif
@@ -55,7 +56,7 @@
 #import "AudioOutputModel.h"
 #import "AudioOutputQueue.h"
 
-#define ENV @"staging-"
+#define ENV @""
 #define HTTP_SCHEMA @"https"
 #define WEBSOCKET_SCHEMA @"WSS"
 

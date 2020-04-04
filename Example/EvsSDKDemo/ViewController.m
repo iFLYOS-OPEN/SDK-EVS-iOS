@@ -7,14 +7,15 @@
 //
 
 #import "ViewController.h"
-#import <EvsSDKForiOS.h>
+#import <EvsSDKForiOS/EvsSDKForiOS.h>
 #include <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <MJExtension/MJExtension.h>
+#import <IMAKit/IMAKit.h>
 #import "SCSiriWaveformView.h"
 #define ws_url @"wss://staging-ivs.iflyos.cn/embedded/v1"
 #define k_NOTIFICATION_WS_STATE @"notificationWsState"//全局通知
-@interface ViewController ()<EvsSDKDelegate>
+@interface ViewController ()<EvsSDKDelegate,IMAKitDelegate>
 @property (weak, nonatomic) IBOutlet UITextField *clientIdTextField;
 @property (weak, nonatomic) IBOutlet UITextField *deviceIdTextField;
 @property (weak, nonatomic) IBOutlet UITextField *ttsTextField;
@@ -25,8 +26,9 @@
 @property (weak, nonatomic) IBOutlet UIButton *restoreButton;
 @property (weak, nonatomic) IBOutlet UISlider *volumeSilder;
 @property (weak, nonatomic) IBOutlet SCSiriWaveformView *delView;
+@property (weak, nonatomic) IBOutlet UIButton *scanBLEAndConnectButton;
 
-
+@property (strong,nonatomic) IMAManager *imaManager;
 @property (strong,nonatomic) EvsSDKForiOS *evsSDK;
 @end
 
@@ -34,10 +36,8 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    NSString *clientId = self.clientIdTextField.text;
-    
     if (!self.evsSDK) {
-        self.evsSDK = [EvsSDKForiOS create:clientId deviceId:nil wsURL:ws_url];
+        self.evsSDK = [EvsSDKForiOS create:self.clientIdTextField.text deviceId:nil wsURL:ws_url];
         self.evsSDK.delegate = self;
     }
     self.connectButton.enabled = true;
@@ -55,6 +55,15 @@
 }
 - (IBAction)clearLog:(id)sender {
     self.textView.text = @"";
+}
+
+//搜索并连接蓝牙，开始搜索前，请先在设置->蓝牙->列表中匹配蓝牙耳机
+- (IBAction)scanBLE:(id)sender {
+    [self.imaManager startScan];
+}
+
+- (IBAction)stopScan:(id)sender {
+    [self.imaManager stopScan];
 }
 
 #define logSize 20000
@@ -300,5 +309,111 @@
     }
 }
 
+#pragma IMAKitDelegate
 
+/**
+ * 蓝牙是否可用
+ */
+-(void) imaManager:(IMAManager *) imaManager isActive:(BOOL) isActive{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (isActive) {
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙可用"]];
+        }else{
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙不可用，请在控制中心打开蓝牙，并在设置->蓝牙->列表中匹配蓝牙设备"]];
+        }
+    });
+}
+/**
+ * 回调返回蓝牙对象
+ */
+-(void) imaManager:(IMAManager *) imaManager peripheral:(CBPeripheral *)peripheral clientId:(NSString *) clientId{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (peripheral) {
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 搜索-> %@",@"蓝牙设备【%@】进行连接中...",peripheral.name]];
+            [self.imaManager connect:peripheral];
+        }
+    });
+}
+
+/**
+ * 是否连接成功
+ */
+-(void) imaManager:(IMAManager *) imaManager peripheral:(CBPeripheral *)peripheral isConnect:(BOOL) isConnect error:(NSError *) error{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [imaManager stopScan];
+        if (isActive) {
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备【%@】连接成功...",peripheral.name]];
+        }else{
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备【%@】连接失败，%@...",peripheral.name,error.localizedDescription]];
+        }
+    });
+}
+
+/**
+ *  连接后返回设备信息
+ */
+-(void) onGetDeviceInfomation:(NSString *) deviceId clientId:(NSString *) clientId{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"获取蓝牙设备clientId:%@ , deviceId:%@",clientId,deviceId]];
+    });
+}
+/**
+ * 版本是否可用
+ */
+-(void) onVersionVerify:(BOOL) isVersionExchange{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (isVersionExchange) {
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备版本可用"]];
+        }else{
+            [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备版本不可用"]];
+        }
+    });
+}
+
+/**
+*  配对成功
+*/
+-(void) onPairSuccess{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"已成功匹配蓝牙设备"]];
+    });
+}
+/**
+*  配对失败
+*/
+-(void) onPairFail:(int)statusCode msg:(NSString *)msg{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"匹配蓝牙设备失败，%@(%i),请在设置->蓝牙->列表中匹配蓝牙设备",msg,statusCode]];
+    });
+}
+
+/**
+ *  开始录音回调
+ */
+-(void) onStartSpeech{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙开始录音"]];
+        [self.evsSDK tap];
+    });
+}
+
+/**
+ *  结束录音回调
+ */
+-(void) onStopSpeech{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙结束录音"]];
+        [self.evsSDK end];
+    });
+}
+
+/**
+* 音频数据处理
+* @param data
+* @param length
+*/
+-(void)onAudioData:(NSData *) data length:(int) length{
+    NSLog(@"[*]音频输入流线程 onAudioData:: - length(%i) - %@",length,[NSThread currentThread]);
+    [self.evsSDK sendData:data];
+}
 @end

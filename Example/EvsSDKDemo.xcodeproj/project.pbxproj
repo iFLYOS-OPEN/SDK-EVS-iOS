@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		43B77D4572EE3CE2E8A196E0 /* Pods_EvsSDKDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3F12E800609E22B677632 /* Pods_EvsSDKDemo.framework */; };
+		8E2D5CC524386463000916C8 /* libIMAKit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E2D5CC424386463000916C8 /* libIMAKit.a */; };
 		8E367C1423011DA40010B38B /* network_error_retry.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1323011DA40010B38B /* network_error_retry.m4a */; };
 		8E367C1823011DD50010B38B /* network_error_wait.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1723011DD50010B38B /* network_error_wait.m4a */; };
 		8E367C1B23011DDD0010B38B /* power_on.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1923011DDD0010B38B /* power_on.mp3 */; };
@@ -35,6 +36,7 @@
 		8E80438022E725CD0003FA93 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E80437F22E725CD0003FA93 /* Assets.xcassets */; };
 		8E80438322E725CD0003FA93 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8E80438122E725CD0003FA93 /* LaunchScreen.storyboard */; };
 		8E80438622E725CD0003FA93 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8E80438522E725CD0003FA93 /* main.m */; };
+		8E80438E22E725EF0003FA93 /* libEvsSDKForiOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E80438D22E725EF0003FA93 /* libEvsSDKForiOS.a */; };
 		8EA1315C2301A12A0044D9DC /* SCSiriWaveformView.m in Sources */ = {isa = PBXBuildFile; fileRef = 8EA1315A2301A12A0044D9DC /* SCSiriWaveformView.m */; };
 		8EA37DF8230E89C900F23944 /* auth_error.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8EA37DF7230E89C900F23944 /* auth_error.mp3 */; };
 		8EE4798E22FD46A900BB5F49 /* detection.aiff in Resources */ = {isa = PBXBuildFile; fileRef = 8EE4798D22FD46A900BB5F49 /* detection.aiff */; };
@@ -45,6 +47,9 @@
 		26B42D55AE30DDCD885A4812 /* Pods-EvsSDKDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvsSDKDemo.release.xcconfig"; path = "Target Support Files/Pods-EvsSDKDemo/Pods-EvsSDKDemo.release.xcconfig"; sourceTree = "<group>"; };
 		37E3F12E800609E22B677632 /* Pods_EvsSDKDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_EvsSDKDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E05110A22E84F93002EF76D /* EvsSDKDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EvsSDKDemo.entitlements; sourceTree = "<group>"; };
+		8E2D5CC424386463000916C8 /* libIMAKit.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libIMAKit.a; sourceTree = "<group>"; };
+		8E2D5CC624386470000916C8 /* IMAKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAKit.h; sourceTree = "<group>"; };
+		8E2D5CC724386471000916C8 /* IMAManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAManager.h; sourceTree = "<group>"; };
 		8E367C1323011DA40010B38B /* network_error_retry.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = network_error_retry.m4a; sourceTree = "<group>"; };
 		8E367C1723011DD50010B38B /* network_error_wait.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = network_error_wait.m4a; sourceTree = "<group>"; };
 		8E367C1923011DDD0010B38B /* power_on.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = power_on.mp3; sourceTree = "<group>"; };
@@ -93,6 +98,8 @@
 				8E42C6E523151DC200CEA156 /* libc++.tbd in Frameworks */,
 				8E42C6E323151D7600CEA156 /* libz.tbd in Frameworks */,
 				8E42C6E123151D7100CEA156 /* libstdc++.6.0.9.tbd in Frameworks */,
+				8E80438E22E725EF0003FA93 /* libEvsSDKForiOS.a in Frameworks */,
+				8E2D5CC524386463000916C8 /* libIMAKit.a in Frameworks */,
 				43B77D4572EE3CE2E8A196E0 /* Pods_EvsSDKDemo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,6 +107,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8E2D5CC3243863E0000916C8 /* IMAKit */ = {
+			isa = PBXGroup;
+			children = (
+				8E2D5CC624386470000916C8 /* IMAKit.h */,
+				8E2D5CC724386471000916C8 /* IMAManager.h */,
+				8E2D5CC424386463000916C8 /* libIMAKit.a */,
+			);
+			path = IMAKit;
+			sourceTree = "<group>";
+		};
 		8E367BCC23011CE20010B38B /* resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -147,6 +164,7 @@
 		8E80437522E725CC0003FA93 /* EvsSDKDemo */ = {
 			isa = PBXGroup;
 			children = (
+				8E2D5CC3243863E0000916C8 /* IMAKit */,
 				8EA131592301A12A0044D9DC /* SCSiriWaveformView */,
 				8E367BCC23011CE20010B38B /* resources */,
 				8E05110A22E84F93002EF76D /* EvsSDKDemo.entitlements */,
@@ -489,13 +507,27 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 957FJVBDCZ;
 				ENABLE_BITCODE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/AFNetworking/AFNetworking.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/FMDB/FMDB.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/KeychainItemWrapper-Copy/KeychainItemWrapper_Copy.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/MJExtension/MJExtension.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/SocketRocket/SocketRocket.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/WebViewJavascriptBridge/WebViewJavascriptBridge.framework/Headers\"",
+					"\"$(SRCROOT)/EvsSDKDemo/IMAKit\"",
+				);
 				INFOPLIST_FILE = EvsSDKDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				ONLY_ACTIVE_ARCH = NO;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/EvsSDKDemo/IMAKit",
+				);
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-l\"icucore\"",
@@ -543,11 +575,25 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 957FJVBDCZ;
 				ENABLE_BITCODE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/AFNetworking/AFNetworking.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/FMDB/FMDB.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/KeychainItemWrapper-Copy/KeychainItemWrapper_Copy.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/MJExtension/MJExtension.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/SocketRocket/SocketRocket.framework/Headers\"",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/WebViewJavascriptBridge/WebViewJavascriptBridge.framework/Headers\"",
+					"\"$(SRCROOT)/EvsSDKDemo/IMAKit\"",
+				);
 				INFOPLIST_FILE = EvsSDKDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/EvsSDKDemo/IMAKit",
 				);
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (

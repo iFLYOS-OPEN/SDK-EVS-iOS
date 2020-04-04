@@ -71,9 +71,7 @@
         shareInstance = [[self alloc] init];
         [[AudioInput sharedAudioManager] run];
         //使用ffmpeg licence 是demo licence
-#if isCustomPlayerModel
-        [AVPLicense register:@"zneaHNCzElTcs6RhLDeJm6UKot04AjDe0zdhXCn1scTsxX5Gwv4jRtvH7dNjnKiZw3L/ANm83F0TTB40xawqFYupmFzs4nklcQaqpLr3Osf4KPy5Jf0c+FdvQqmU6mIohnmsvuP4cgOvfy9quLtFcIqLrKYKmhaJSz93Y1F4dg2QwlNwnYyMmQ7sQYQrjqYyADB3vQ0X1eYEtVODG6XfmF7EMzyN5X8Qr4kt1Vrk1Qg="];
-        #endif
+
     });
     return shareInstance;
 }
@@ -313,13 +311,17 @@
  *  开始录音
  */
 -(void) tap{
-    if (self.state != OPEN) {
+    SRReadyState state = self.websocketManager.state;
+    if (state != SR_OPEN) {
         EVSLog(@"EVS is not connected,please connected...");
         return;
     }
+    
+    NSLog(@"开始录音2 - %@",[NSThread currentThread]);
     [self clearAll];
     [self.audioOutput stopTTS];
-    
+//    [self.audioOutput stop];
+    [self.audioOutput setBackgroundVolume2Percent];
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     NSDictionary *contextDict = [self.sqlLiteManager asynQueryContext:deviceId tableName:CONTEXT_TABLE_NAME];
     if (contextDict){
@@ -333,21 +335,23 @@
     
     //发送语音指令
     EVSRecognizer *recognizer = [[EVSRecognizer alloc] init];
+    recognizer.iflyos_context.m_template.supported_custom_template = YES;//是否支持custom_template
     NSDictionary *dict = [recognizer getJSON];
     [self.websocketManager sendDict:dict];
+    NSLog(@"开始录音2.0 - %@",[NSThread currentThread]);
     [self.audioInput start];
-    [[EVSFocusManager shareInstance] wakeUp0];
+//    [[EVSFocusManager shareInstance] wakeUp0];
 }
 
 /**
  *  结束录音
  */
 -(void) end{
+    [self.audioInput stop];
     if (self.state != OPEN) {
         EVSLog(@"EVS is not connected,please connected...");
         return;
     }
-    [self.audioInput stop];
     [self.websocketManager sendStr:COMMAND_END];
 }
 
@@ -355,11 +359,11 @@
  *  取消录音
  */
 -(void) cancel{
+    [self.audioInput stop];
     if (self.state != OPEN) {
         EVSLog(@"EVS is not connected,please connected...");
         return;
     }
-    [self.audioInput stop];
     [self.websocketManager sendStr:COMMAND_CANCEL];
 }
 
@@ -367,6 +371,9 @@
  *  暂停
  */
 -(void) pause{
+    [self clearAll];
+    [self.audioOutput pause];
+    [self.audioOutput stopTTS];
     if (self.state != OPEN) {
         EVSLog(@"EVS is not connected,please connected...");
         return;
@@ -375,9 +382,6 @@
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_idle} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
     }
-    [self clearAll];
-    [self.audioOutput pause];
-    [self.audioOutput stopTTS];
     EVSAudioPlayerPlaybackControlCommand *controlCommand = [[EVSAudioPlayerPlaybackControlCommand alloc] init];
     controlCommand.iflyos_request.payload.type = @"PAUSE";
     NSDictionary *dict = [controlCommand getJSON];
@@ -404,6 +408,24 @@
     controlCommand.iflyos_request.payload.type = @"RESUME";
     NSDictionary *dict = [controlCommand getJSON];
     [self.websocketManager sendDict:dict];
+}
+
+/**
+ *  后台播放
+ */
+-(void) playBackgroud{
+    EVSLog(@"EVS is playBackgroud...");
+    //后台播放音频设置
+     AVAudioSession *session = [AVAudioSession sharedInstance];
+     [session setActive:YES error:nil];//激活音频会话。
+    /*
+        AVAudioSessionCategoryPlayback 或 kAudioSessionCategory_MediaPlayback
+        ——用于以语音为主的应用，使用这个category的应用不会随着静音键和屏幕关闭而静音。
+        如果不写这句，锁屏时，会暂停播放。
+     */
+     [session setCategory:AVAudioSessionCategoryPlayback error:nil];
+    //注意：在这里写锁屏音乐的封面等信息也可以，不过是不是太麻烦了，所以在播放VC中设置就可以了。
+    [self.audioOutput onlyPlay];
 }
 
 /**
@@ -501,7 +523,8 @@
  *  progress : 进度 [0~1]
  */
 -(void) setMeidaProgress:(float)progress{
-    self.audioOutput.currentProgress = progress;
+    
+    [self.audioOutput updateProgress:progress];
 }
 
 -(float) getVolume{

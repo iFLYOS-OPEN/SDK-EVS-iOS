@@ -10,13 +10,13 @@
 #import "EVSHeader.h"
 @implementation EVSContextVersionProtocolModel
 -(NSString *) version{
+    if (_version){
+        return _version;
+    }
     return @"1.0";
 }
 @end
 @implementation EVSContextAppActionModel
--(NSString *) version{
-    return @"1.0";
-}
 //-(NSString *) foreground_app{
 //    return @"com.qiyi.video.speaker";
 //}
@@ -49,9 +49,6 @@
     return self;
 }
 
--(NSString *) version{
-    return @"1.0";
-}
 @end
 
 @implementation EVSContextProtocolModel
@@ -123,6 +120,17 @@
         _video_player = [[EVSContextVideoPlayerModel alloc] init];
     }
     return _video_player;
+}
+
+-(EVSContextTemplateProtocolModel *) m_template{
+    if (!_m_template) {
+        _m_template = [[EVSContextTemplateProtocolModel alloc] init];
+    }
+    return _m_template;
+}
+
++ (NSDictionary *)mj_replacedKeyFromPropertyName {
+    return @{@"m_template":@"template"};
 }
 
 +(NSDictionary *) getJSON{
@@ -237,4 +245,10 @@
 
 @implementation EVSPlaybackControllerProtocolModel
 
+@end
+
+@implementation EVSContextTemplateProtocolModel
+-(NSString *) version{
+    return @"1.2";
+}
 @end

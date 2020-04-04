@@ -174,43 +174,46 @@
  *  检查token时效，时效性重新申请，并刷新数据库token
  */
 -(void) checkTokenVaild{
-    //计算时效性
-    EVSAuthModel *authModel = [EVSAuthModel loadModel];
-    long long expiresCostTimeSp = (authModel.created_at + authModel.expires_in);
-    long long nowTimeSp = [[EVSDateUtils getNowTimeTimestamp] longLongValue];
-    
-    if(!authModel.refresh_token){
-        return;
-    }
-    
-    if (expiresCostTimeSp - nowTimeSp < 3600) {
-        EVSLog(@"token refresh...");
-        NSString *urlContext = [NSString stringSubstitution:AUTH_ACCESS_TOKEN targetStr:@"{http_schema}" replaceStr:HTTP_SCHEMA];
-        urlContext = [NSString stringSubstitution:urlContext targetStr:@"{env}" replaceStr:ENV];
-        NSString *encodedValue = [urlContext stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    dispatch_queue_t queue =  dispatch_queue_create("checkToken", DISPATCH_QUEUE_SERIAL);
+    dispatch_async(queue, ^{
+        //计算时效性
+        EVSAuthModel *authModel = [EVSAuthModel loadModel];
+        long long expiresCostTimeSp = (authModel.created_at + authModel.expires_in);
+        long long nowTimeSp = [[EVSDateUtils getNowTimeTimestamp] longLongValue];
         
-        NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
-        [params setObject:@"refresh_token" forKey:@"grant_type"];
-        if (authModel.refresh_token) {
-            [params setObject:authModel.refresh_token forKey:@"refresh_token"];
+        if(!authModel.refresh_token){
+            return;
         }
         
-        //重新刷新token
-        EVSHTTPRequest *request = [[EVSHTTPRequest alloc] init];
-        request.dataModel.contextUrl = encodedValue;
-        request.dataModel.requestType = POST;
-        request.dataModel.params = params;
-        EVSDataModel *dataModel = [request synRequest];
-        if (dataModel.statusCode == REQUEST_SUCCESS_CODE && dataModel.resultDataDictionary) {
-            EVSLog(@"refresh token success ...");
-            NSDictionary *dict = dataModel.resultDataDictionary;
-            if (dict) {
-                EVSAuthModel *authModel = [EVSAuthModel mj_objectWithKeyValues:dict];
-                [authModel save];
+        if (expiresCostTimeSp - nowTimeSp < 3600) {
+            EVSLog(@"token refresh...");
+            NSString *urlContext = [NSString stringSubstitution:AUTH_ACCESS_TOKEN targetStr:@"{http_schema}" replaceStr:HTTP_SCHEMA];
+            urlContext = [NSString stringSubstitution:urlContext targetStr:@"{env}" replaceStr:ENV];
+            NSString *encodedValue = [urlContext stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            
+            NSMutableDictionary *params = [[NSMutableDictionary alloc] init];
+            [params setObject:@"refresh_token" forKey:@"grant_type"];
+            if (authModel.refresh_token) {
+                [params setObject:authModel.refresh_token forKey:@"refresh_token"];
             }
-        }else{
-            EVSLog(@"refresh token fail statusCode: %li",dataModel.statusCode);
+            
+            //重新刷新token
+            EVSHTTPRequest *request = [[EVSHTTPRequest alloc] init];
+            request.dataModel.contextUrl = encodedValue;
+            request.dataModel.requestType = POST;
+            request.dataModel.params = params;
+            EVSDataModel *dataModel = [request synRequest];
+            if (dataModel.statusCode == REQUEST_SUCCESS_CODE && dataModel.resultDataDictionary) {
+                EVSLog(@"refresh token success ...");
+                NSDictionary *dict = dataModel.resultDataDictionary;
+                if (dict) {
+                    EVSAuthModel *authModel = [EVSAuthModel mj_objectWithKeyValues:dict];
+                    [authModel save];
+                }
+            }else{
+                EVSLog(@"refresh token fail statusCode: %li",dataModel.statusCode);
+            }
         }
-    }
+    });
 }
 @end

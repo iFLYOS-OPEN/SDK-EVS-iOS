@@ -40,12 +40,6 @@ typedef NS_ENUM(NSInteger, EVS_VIDEO_PLAYER_STATE) {
  *  canPlay : 是否能播放
  */
 -(void) videoPlayer:(id) playerItem canPlay:(BOOL) canPlay;
-/**
- *  缓冲状态
- *  duration ： 总时长
- *  buffer ： 缓冲百分比
- */
--(void) videoPlayer:(id) playerItem buffer:(float) buffer;
 
 /**
  *  播放进度

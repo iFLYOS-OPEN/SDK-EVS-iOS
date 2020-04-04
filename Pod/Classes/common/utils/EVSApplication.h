@@ -20,6 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic,assign,readonly) EVSSessionState sessionState;
 //获取到当前所在的视图
 + (UIViewController *)presentingVC;
++ (BOOL)isOpenA2DPAndBluetoothHFP;
 /*
  * 设置音量
  */

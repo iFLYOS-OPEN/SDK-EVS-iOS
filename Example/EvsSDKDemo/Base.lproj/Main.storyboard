@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
-    <device id="retina6_1" orientation="portrait">
-        <adaptation id="fullscreen"/>
-    </device>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="16096" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16086"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -55,7 +53,6 @@
                                         <constraints>
                                             <constraint firstAttribute="height" constant="30" id="Veb-Sv-SvT"/>
                                         </constraints>
-                                        <nil key="textColor"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                         <textInputTraits key="textInputTraits"/>
                                     </textField>
@@ -64,7 +61,6 @@
                                         <constraints>
                                             <constraint firstAttribute="height" constant="30" id="rE2-zW-n5v"/>
                                         </constraints>
-                                        <nil key="textColor"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                         <textInputTraits key="textInputTraits"/>
                                     </textField>
@@ -83,7 +79,6 @@
                                         <constraints>
                                             <constraint firstAttribute="height" constant="30" id="T1W-1o-aJI"/>
                                         </constraints>
-                                        <nil key="textColor"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                         <textInputTraits key="textInputTraits"/>
                                     </textField>
@@ -296,6 +291,28 @@
                                             <action selector="clearLog:" destination="BYZ-38-t0r" eventType="touchUpInside" id="qmT-Qn-q3e"/>
                                         </connections>
                                     </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kso-dg-7Pd">
+                                        <rect key="frame" x="151" y="154" width="138" height="30"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="138" id="jlO-cZ-zWw"/>
+                                            <constraint firstAttribute="height" constant="30" id="zKz-CI-5ec"/>
+                                        </constraints>
+                                        <state key="normal" title="搜索并连接蓝牙设备"/>
+                                        <connections>
+                                            <action selector="scanBLE:" destination="BYZ-38-t0r" eventType="touchUpInside" id="eQP-yq-zlx"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="R7r-u8-jx8">
+                                        <rect key="frame" x="11" y="192" width="77" height="30"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="30" id="NkR-By-Kvi"/>
+                                            <constraint firstAttribute="width" constant="77" id="moo-w1-YOJ"/>
+                                        </constraints>
+                                        <state key="normal" title="停止搜索"/>
+                                        <connections>
+                                            <action selector="stopScan:" destination="BYZ-38-t0r" eventType="touchUpInside" id="6Lh-cb-8pc"/>
+                                        </connections>
+                                    </button>
                                 </subviews>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <constraints>
@@ -303,6 +320,7 @@
                                     <constraint firstItem="TBr-0H-EJN" firstAttribute="leading" secondItem="wk4-uT-nnR" secondAttribute="trailing" constant="16" id="0O1-Sh-ff0"/>
                                     <constraint firstItem="TPt-Or-eC4" firstAttribute="top" secondItem="h1d-Fr-R2G" secondAttribute="bottom" constant="16" id="1oy-w1-Tll"/>
                                     <constraint firstItem="ZbW-6F-Y64" firstAttribute="leading" secondItem="0Uj-ft-OIE" secondAttribute="trailing" constant="16" id="4Z6-bK-jBi"/>
+                                    <constraint firstItem="kso-dg-7Pd" firstAttribute="leading" secondItem="HVk-R2-sMQ" secondAttribute="trailing" constant="26" id="67f-5e-rAv"/>
                                     <constraint firstItem="87T-K3-f6g" firstAttribute="leading" secondItem="ZbW-6F-Y64" secondAttribute="trailing" constant="16" id="9Xy-39-diK"/>
                                     <constraint firstItem="wgp-98-Yj1" firstAttribute="leading" secondItem="HSZ-VT-zSE" secondAttribute="leading" constant="16" id="G0K-Ks-jey"/>
                                     <constraint firstItem="wk4-uT-nnR" firstAttribute="leading" secondItem="3vN-0O-kXz" secondAttribute="trailing" constant="16" id="HNK-fb-Hbs"/>
@@ -322,8 +340,11 @@
                                     <constraint firstItem="LZT-3N-yqA" firstAttribute="leading" secondItem="Juq-gb-GaN" secondAttribute="trailing" constant="16" id="aMK-8V-qEA"/>
                                     <constraint firstItem="3vN-0O-kXz" firstAttribute="top" secondItem="HSZ-VT-zSE" secondAttribute="top" constant="16" id="b83-9H-g4B"/>
                                     <constraint firstItem="0Uj-ft-OIE" firstAttribute="top" secondItem="3vN-0O-kXz" secondAttribute="bottom" constant="16" id="bxO-k9-Cds"/>
+                                    <constraint firstItem="R7r-u8-jx8" firstAttribute="top" secondItem="wgp-98-Yj1" secondAttribute="bottom" constant="8" id="d0n-5m-8dJ"/>
                                     <constraint firstItem="h1d-Fr-R2G" firstAttribute="leading" secondItem="HSZ-VT-zSE" secondAttribute="leading" constant="16" id="e8w-ey-yGg"/>
+                                    <constraint firstItem="kso-dg-7Pd" firstAttribute="top" secondItem="Juq-gb-GaN" secondAttribute="bottom" constant="16" id="eVA-IM-qqF"/>
                                     <constraint firstAttribute="bottom" secondItem="avn-B1-8ZJ" secondAttribute="bottom" id="eg8-xb-Ity"/>
+                                    <constraint firstItem="R7r-u8-jx8" firstAttribute="leading" secondItem="HSZ-VT-zSE" secondAttribute="leading" constant="11" id="jxR-Ud-0A9"/>
                                     <constraint firstItem="87T-K3-f6g" firstAttribute="top" secondItem="TBr-0H-EJN" secondAttribute="bottom" constant="16" id="llJ-3t-TEt"/>
                                     <constraint firstItem="HVk-R2-sMQ" firstAttribute="leading" secondItem="wgp-98-Yj1" secondAttribute="trailing" constant="16" id="mjh-Jq-yTl"/>
                                     <constraint firstItem="0Uj-ft-OIE" firstAttribute="leading" secondItem="h1d-Fr-R2G" secondAttribute="trailing" constant="16" id="nB1-BP-G5v"/>
@@ -355,6 +376,7 @@
                         <outlet property="disconnectButton" destination="wk4-uT-nnR" id="5zZ-Fq-z28"/>
                         <outlet property="reconnectButton" destination="3vN-0O-kXz" id="CYR-mn-l0f"/>
                         <outlet property="restoreButton" destination="TBr-0H-EJN" id="GbM-hN-0Di"/>
+                        <outlet property="scanBLEAndConnectButton" destination="kso-dg-7Pd" id="U7a-S0-iY7"/>
                         <outlet property="textView" destination="A0F-wh-8Dh" id="OL0-lm-p1c"/>
                         <outlet property="ttsTextField" destination="UZq-J0-6sx" id="vhO-Sb-vLh"/>
                         <outlet property="volumeSilder" destination="UCD-ix-q2B" id="bC6-JA-dvA"/>

@@ -7,7 +7,10 @@
 //  音频输出
 
 #import <UIKit/UIKit.h>
+#import <FreeStreamer/FreeStreamer-umbrella.h>
 #import <AVFoundation/AVFoundation.h>
+#import "STKAudioPlayer.h"
+#import "EVSSampleQueueId.h"
 #import "AudioOutputModel.h"
 NS_ASSUME_NONNULL_BEGIN
 /**************************************************前景音频播放器*******************************************************/
@@ -35,12 +38,12 @@ NS_ASSUME_NONNULL_BEGIN
  *  单例
  */
 +(instancetype) shareInstance;
+//@property (nonatomic,strong) FSAudioStream *contextFSPlayer;
 
 @property id<AudioOutputDelegate> delegate;
-
 //播放器
-@property (nonatomic,strong) AVPlayer *player;//内容PLAYBACK
-@property (nonatomic,strong) AVPlayer *ttsChannelPlayer;//TTS
+@property (nonatomic,strong) STKAudioPlayer *ttsPlayer;
+@property (nonatomic,strong) AVPlayer *contextPlayer;
 @property (nonatomic,strong) AVAudioPlayer *soundEffectsPlayer;//音效
 
 @property (nonatomic,strong) AudioOutputModel *contextModel;//内容通道当前Model
@@ -69,16 +72,18 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) setBackgroundVolume20Percent;
 //背景音乐恢复
 -(void) resumeBackgroundVolume;
-
+//更新z进度
+-(void) updateProgress:(float)currentProgress;
 //停止
 -(void) stop;
 //停止（TTS播放器）
 -(void) stopTTS;
 //播放,time:播放进度
--(void) play:(NSTimeInterval) time;
+//-(void) play:(NSTimeInterval) time;
 //暂停
 -(void) pause;
-
+//本地回复
+-(void) resume;
 //恢复(本地播放器恢复)
 -(void) resumeLocalPlay;
 
@@ -89,7 +94,8 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) setVolume:(float) volume;
 //设置TTS音量(0~1)
 -(void) setTTSVolume:(float) volume;
-
+//只是播放
+-(void) onlyPlay;
 //视频回调
 -(void) videoreadyToPlay;
 -(void) videoPlayEnd;

@@ -5,9 +5,15 @@ use_frameworks!
 
 target 'EvsSDKDemo' do
     project 'EvsSDKDemo/EvsSDKDemo.xcodeproj'
+    pod 'PLPlayerKit', '~> 3.4.3'
+    pod 'FreeStreamer'
+    pod 'opus-ios'
+    pod 'FMDB'
+    pod "Protobuf"
     pod 'FMDB'
     pod 'SocketRocket'
     pod 'MJExtension'
-    pod 'AFNetworking'
+    pod 'AFNetworking', '~> 3.2.1'
     pod 'WebViewJavascriptBridge'
+    pod 'KeychainItemWrapper-Copy'
 end

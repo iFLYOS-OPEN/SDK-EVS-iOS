@@ -11,7 +11,7 @@
 #define SCREEN_HEIGHT ([[UIScreen mainScreen] bounds].size.height)
 #define SCREEN_WIDTH ([[UIScreen mainScreen] bounds].size.width)
 
-@interface EVSVideoPlayerManager()
+@interface EVSVideoPlayerManager()<PLPlayerDelegate>
 @property (nonatomic,strong) AVPlayer *player;
 @property (nonatomic,strong) AVPlayerLayer *playerLayer;
 @property (nonatomic,strong) AVPlayerItem *playerItem;
@@ -25,20 +25,25 @@
 //是否重复提交NEARLY_FINISHED
 @property (assign,atomic) BOOL nearlyFinishedSended;
 #if isCustomPlayerModel
-@property (nonatomic,strong) FFAVPlayerController *ffavPlayer;
+//@property (nonatomic,strong) FFAVPlayerController *ffavPlayer;
+@property (nonatomic,strong) PLPlayer *plPlayer;
+@property (nonatomic,strong) PLPlayerOption *option;
 #endif
 @property (nonatomic,strong) UIView *drawView;
 @end
 
 @implementation EVSVideoPlayerManager
 #if isCustomPlayerModel
--(FFAVPlayerController *) ffavPlayer{
-    if (!_ffavPlayer) {
-        _ffavPlayer = [[FFAVPlayerController alloc] init];
-        _ffavPlayer.delegate = self;
-        _ffavPlayer.shouldAutoPlay = YES;
+-(PLPlayerOption *) option{
+    if (!_option) {
+        _option = [PLPlayerOption defaultOption];
+        // 更改需要修改的 option 属性键所对应的值
+        [_option setOptionValue:@2000 forKey:PLPlayerOptionKeyMaxL1BufferDuration];
+        [_option setOptionValue:@1000 forKey:PLPlayerOptionKeyMaxL2BufferDuration];
+        [_option setOptionValue:@(NO) forKey:PLPlayerOptionKeyVideoToolbox];
+        [_option setOptionValue:@(kPLLogInfo) forKey:PLPlayerOptionKeyLogLevel];
     }
-    return _ffavPlayer;
+    return _option;
 }
 #endif
 -(UIView *) drawView{
@@ -65,11 +70,17 @@
     }
     return self;
 }
-//注册视频组件
--(void) registVideoPlayerComponent:(AVPlayer *) player playerLayer:(AVPlayerLayer *) playerLayer playerItem:(AVPlayerItem *) playerItem{
-    self.player = player;
-    self.playerLayer = playerLayer;
-    self.playerItem = playerItem;
+//进入后台
+-(void) enterBackground{
+    if (self.plPlayer) {
+        self.plPlayer.backgroundPlayEnable = NO;
+    }
+}
+//进入前台
+-(void) becomeActive{
+    if (self.plPlayer) {
+        self.plPlayer.backgroundPlayEnable = YES;
+    }
 }
 //创建视频窗口
 -(void) createVideoPlayer:(UIView *) view frame:(CGRect) frame url:(NSString *) url offset:(long) offset resource_id:(NSString *) resource_id{
@@ -79,10 +90,22 @@
     self.targetView = view;
     if (url) {
         #if isCustomPlayerModel
-                  NSURL *urlObj = [NSURL URLWithString:url];
-                  if (urlObj) {
-                      [self.ffavPlayer openMedia:urlObj withOptions:nil];
-                  }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSURL *urlObj = [NSURL URLWithString:url];
+            if (urlObj) {
+                if (self.plPlayer) {
+                    [self.plPlayer openPlayerWithURL:urlObj];
+                }else{
+                    self.plPlayer = [[PLPlayer alloc] initWithURL:urlObj option:self.option];
+                    self.plPlayer.delegate = self;
+                    [self.plPlayer play];
+                }
+                self.drawView = [self.plPlayer playerView];
+                self.drawView.frame = self.frame;
+                self.drawView.userInteractionEnabled = NO;
+                [self.targetView insertSubview:self.drawView atIndex:0];
+            }
+        });
         #else
             // 设置视频数据
             [self playWithViedeoUrl:url];
@@ -113,9 +136,15 @@
             dispatch_async(dispatch_get_main_queue(), ^{
                 NSURL *urlObj = [NSURL URLWithString:url];
                 if (urlObj) {
-                    [self.ffavPlayer stop];
-                    self.ffavPlayer = nil;
-                    [self.ffavPlayer openMedia:urlObj withOptions:nil];
+                    if (self.plPlayer) {
+                        [self.plPlayer stop];
+                        NSTimeInterval time = (offset / TIME_ZOOM);
+                        if (time > 0) {
+                            [self.plPlayer preStartPosTime:CMTimeMake(time, 1)];
+                        }
+                        
+                        [self.plPlayer playWithURL:urlObj sameSource:NO];
+                    }
                 }
             });
             #else
@@ -176,7 +205,11 @@
 //暂停
 -(void) pause{
     #if isCustomPlayerModel
-              [self.ffavPlayer pause];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.plPlayer) {
+            [self.plPlayer pause];
+        }
+    });
     #else
         if (self.player) {
             [self.player pause];
@@ -184,7 +217,7 @@
     #endif
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
-        [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+        [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused,@"offset":@(self.offset)} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
     }
     EVSVideoPlayerProgressSync *progressSync = [[EVSVideoPlayerProgressSync alloc] init];
     progressSync.iflyos_request.payload.type = @"PAUSED";
@@ -195,7 +228,11 @@
 -(void) play:(NSTimeInterval) offset{
     #if isCustomPlayerModel
        NSTimeInterval time = (offset / TIME_ZOOM);
-              [self.ffavPlayer play:time];
+       dispatch_async(dispatch_get_main_queue(), ^{
+                  if (self.plPlayer) {
+                      [self.plPlayer seekTo:CMTimeMake(time, 1)];
+                  }
+              });
     #else
         if (self.player) {
                 NSTimeInterval time = (offset / TIME_ZOOM);
@@ -216,7 +253,11 @@
 //恢复
 -(void) resume{
     #if isCustomPlayerModel
-        [self.ffavPlayer resume];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.plPlayer) {
+                [self.plPlayer resume];
+            }
+        });
     #else
         if (self.player) {
             NSTimeInterval time = (self.offset / 1000);
@@ -233,7 +274,11 @@
 //播放
 -(void) play{
     #if isCustomPlayerModel
-        [self.ffavPlayer play:0];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.plPlayer) {
+                [self.plPlayer play];
+            }
+        });
     #else
         if (self.player) {
             [self.player play];
@@ -251,6 +296,10 @@
 
 //清除
 -(void) clean{
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+    if (deviceId) {
+        [[EVSSqliteManager shareInstance] update:@{@"state":playback_state_paused} device_id:deviceId tableName:VIDEO_PLAYER_TABLE_NAME];
+    }
     //同步状态
     EVSVideoPlayerProgressSync *videoProgressSync = [[EVSVideoPlayerProgressSync alloc] init];
     videoProgressSync.iflyos_request.payload.type = @"FINISHED";
@@ -260,9 +309,8 @@
     [[EVSWebscoketManager shareInstance] sendDict:videoProgressSyncDict];
     #if isCustomPlayerModel
          [self.drawView removeFromSuperview];
-               [self.ffavPlayer stop];
-               self.ffavPlayer = nil;
-               
+               [self.plPlayer stop];
+               self.plPlayer = nil;
                self.targetView = nil;
                self.delegate = nil;
     #else
@@ -390,9 +438,9 @@
         NSTimeInterval totalDuration = CMTimeGetSeconds(playerItem.duration);
         float progress = totalBuffer / totalDuration;
         NSLog(@"video - 缓冲进度：%.02f",progress);
-        if ([self.delegate respondsToSelector:@selector(videoPlayer:duration:buffer:)]) {
-            [self.delegate videoPlayer:playerItem buffer:progress];
-        }
+//        if ([self.delegate respondsToSelector:@selector(videoPlayer:duration:buffer:)]) {
+//            [self.delegate videoPlayer:playerItem buffer:progress];
+//        }
     }
 }
 
@@ -442,103 +490,117 @@
 }
 #if isCustomPlayerModel
 #pragma FFAVMediaPlayerDelegate
-- (void)FFAVPlayerControllerWillLoad:(FFAVPlayerController *)controller{
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([self.delegate respondsToSelector:@selector(videoPlayer:canPlay:)]) {
-            [self.delegate videoPlayer:controller canPlay:YES];
-        }
-        [self.drawView removeFromSuperview];
-        self.drawView = nil;
-    });
-}
 
-- (void)FFAVPlayerControllerDidLoad:(FFAVPlayerController *)controller error:(NSError *)error {
-    if (!error) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([self.ffavPlayer hasVideo]) {
-                self.drawView = [self.ffavPlayer drawableView];
-                self.drawView.frame = self.frame;
-                self.drawView.userInteractionEnabled = NO;
-                [self.targetView insertSubview:self.drawView atIndex:0];
-            }
-        });
-    }else{
-        NSLog(@"错误：%@",error);
-    }
-}
-//状态
-// state was changed
-- (void)FFAVPlayerControllerDidStateChange:(FFAVPlayerController *)controller{
-    AVPlayerState state = [controller playerState];
-    /**
-            kAVPlayerStateInitialized=0,
-            kAVPlayerStatePlaying,
-            kAVPlayerStatePaused,
-            kAVPlayerStateFinishedPlayback,
-            kAVPlayerStateStoped,
-            kAVPlayerStateUnknown=0xff
-     */
+// 实现 <PLPlayerDelegate> 来控制流状态的变更
+- (void)player:(nonnull PLPlayer *)player statusDidChange:(PLPlayerStatus)state {
+    // 这里会返回流的各种状态，你可以根据状态做 UI 定制及各类其他业务操作
+    // 除了 Error 状态，其他状态都会回调这个方法
+  // 开始播放，当连接成功后，将收到第一个 PLPlayerStatusCaching 状态
+  // 第一帧渲染后，将收到第一个 PLPlayerStatusPlaying 状态
+  // 播放过程中出现卡顿时，将收到 PLPlayerStatusCaching 状态
+  // 卡顿结束后，将收到 PLPlayerStatusPlaying 状态
     switch (state) {
-        case kAVPlayerStateInitialized:
-            NSLog(@"FFAVPlayer状态：初始化");
-            {
-                
-            }
-            break;
-        case kAVPlayerStatePlaying:
-            NSLog(@"FFAVPlayer状态：播放中");
-            {
-                if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-                    [self.delegate videoPlayer:controller videoState:VIDEO_STATE_PLAYING];
+        case PLPlayerStatusReady:
+            EVSLog(@"[*] audio player ready...");
+        {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if ([self.delegate respondsToSelector:@selector(videoPlayer:canPlay:)]) {
+                    [self.delegate videoPlayer:player canPlay:YES];
                 }
+//                [self.drawView removeFromSuperview];
+//                self.drawView = nil;
                 [[AudioOutput shareInstance] videoreadyToPlay];
-            }
+            });
+        }
             break;
-        case kAVPlayerStatePaused:
-            NSLog(@"FFAVPlayer状态：暂停");
+        case PLPlayerStatusPlaying:
+            EVSLog(@"[*] audio player playing...");
         {
             if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-                [self.delegate videoPlayer:controller videoState:VIDEO_STATE_PAUSE];
+                [self.delegate videoPlayer:player videoState:VIDEO_STATE_PLAYING];
             }
         }
             break;
-        case kAVPlayerStateFinishedPlayback:
-            NSLog(@"FFAVPlayer状态：结束");
+        case PLPlayerStatusPaused:
+            EVSLog(@"[*] audio player paused...");
         {
             if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-                [self.delegate videoPlayer:controller videoState:VIDEO_STATE_END];
+                [self.delegate videoPlayer:player videoState:VIDEO_STATE_PAUSE];
+            }
+        }
+            break;
+        case PLPlayerStatusStopped:
+            EVSLog(@"[*] audio player stopped...");
+        {
+            if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
+                [self.delegate videoPlayer:player videoState:VIDEO_STATE_STOP];
+            }
+        }
+            break;
+        case PLPlayerStatusCompleted:
+            EVSLog(@"[*] audio player completed...");
+        {
+            if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
+                [self.delegate videoPlayer:player videoState:VIDEO_STATE_END];
             }
             [[AudioOutput shareInstance] videoPlayEnd];
         }
-            break;
-        case kAVPlayerStateStoped:
-            NSLog(@"FFAVPlayer状态：停止");
-            {
-                if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-                    [self.delegate videoPlayer:controller videoState:VIDEO_STATE_PAUSE];
-                }
-            }
-            break;
-        case kAVPlayerStateUnknown:
-            
             break;
         default:
             break;
     }
 }
-//当前进度
-// current play time was changed
-- (void)FFAVPlayerControllerDidCurTimeChange:(FFAVPlayerController *)controller position:(NSTimeInterval)position{
-    // 获取当前播放到的秒数
-    float current = position* TIME_ZOOM;
-    // 获取视频总播放秒数
-    float total = controller.duration * TIME_ZOOM;
+
+- (void)player:(nonnull PLPlayer *)player stoppedWithError:(nullable NSError *)error {
+    // 当发生错误，停止播放时，会回调这个方法
+    if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
+           [self.delegate videoPlayer:player videoState:VIDEO_STATE_ERROR];
+       }
+       EVSLog(@"[*] audio player error stoppedWithError:%@",error.localizedDescription);
+       [EVSSystemManager exception:@"video_out" code:@"1001" message:[NSString stringWithFormat:@"video_out player stoppedWithError::%@",error.localizedDescription]];
+       [self syncAudioError:@"1001"];
+}
+
+- (void)player:(nonnull PLPlayer *)player codecError:(nonnull NSError *)error {
+  // 当解码器发生错误时，会回调这个方法
+  // 当 videotoolbox 硬解初始化或解码出错时
+  // error.code 值为 PLPlayerErrorHWCodecInitFailed/PLPlayerErrorHWDecodeFailed
+  // 播发器也将自动切换成软解，继续播放
+    EVSLog(@"[*] audio player error codecError:%@",error.localizedDescription);
+}
+
+/**
+回调将要渲染的帧数据
+该功能只支持直播
+
+@param player 调用该方法的 PLPlayer 对象
+@param frame 将要渲染帧 YUV 数据。
+CVPixelBufferGetPixelFormatType 获取 YUV 的类型。
+软解为 kCVPixelFormatType_420YpCbCr8Planar.
+硬解为 kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange.
+@param pts 显示时间戳 单位ms
+@param sarNumerator
+@param sarDenominator
+其中sar 表示 storage aspect ratio
+视频流的显示比例 sarNumerator sarDenominator
+@discussion sarNumerator = 0 表示该参数无效
+
+@since v2.4.3
+*/
+- (void)player:(nonnull PLPlayer *)player willRenderFrame:(nullable CVPixelBufferRef)frame pts:(int64_t)pts sarNumerator:(int)sarNumerator sarDenominator:(int)sarDenominator{
     
-    NSLog(@"FFAVPlayer::position::%f / %f = %.02f",position,controller.duration,(current/total));
+    // 获取当前播放到的秒数
+    float current = pts;
+    // 获取视频总播放秒数
+    float total = CMTimeGetSeconds(player.totalDuration) * TIME_ZOOM;
+    
+    self.offset = current;
+
+//    NSLog(@"[*] audio player PLPlayer::position::%f / %f = %.02f",current,total,(current/total));
     if ([self.delegate respondsToSelector:@selector(videoPlayer:totalTime:currentTime:)]) {
-        [self.delegate videoPlayer:controller totalTime:total currentTime:current];
+        [self.delegate videoPlayer:player totalTime:total currentTime:current];
     }
-    if (position >= 30 && !self.nearlyFinishedSended) {
+    if (current / TIME_ZOOM >= 30 && !self.nearlyFinishedSended) {
         //同步服务器(NEARLY_FINISHED，即将播放完)
         EVSVideoPlayerProgressSync *progressSync = [[EVSVideoPlayerProgressSync alloc] init];
         progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
@@ -547,57 +609,7 @@
         self.nearlyFinishedSended = YES;
     }
 }
-//当前缓冲
-// current buffering progress was changed[0~1]
-- (void)FFAVPlayerControllerDidBufferingProgressChange:(FFAVPlayerController *)controller progress:(double)progress{
-//    NSLog(@"FFAVPlayer::buffering::%f",progress);
 
-    if (progress <= 0) {
-        if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-            [self.delegate videoPlayer:controller videoState:VIDEO_STATE_BUFFERING];
-        }
-    }
-    if ([self.delegate respondsToSelector:@selector(videoPlayer:duration:buffer:)]) {
-        [self.delegate videoPlayer:controller buffer:progress];
-    }
-
-}
-
-// real bitrate was changed
-- (void)FFAVPlayerControllerDidBitrateChange:(FFAVPlayerController *)controller bitrate:(NSInteger)bitrate{
-    
-}
-
-// real framerate was changed
-- (void)FFAVPlayerControllerDidFramerateChange:(FFAVPlayerController *)controller framerate:(NSInteger)framerate{
-    
-}
-
-// current subtitle was changed
-- (void)FFAVPlayerControllerDidSubtitleChange:(FFAVPlayerController *)controller subtitleItem:(FFAVSubtitleItem *)subtitleItem{
-    
-}
-
-// enter or exit full screen mode
-//进入全屏
-- (void)FFAVPlayerControllerDidEnterFullscreenMode:(FFAVPlayerController *)controller{
-    
-}
-//退出全屏
-- (void)FFAVPlayerControllerDidExitFullscreenMode:(FFAVPlayerController *)controller{
-    
-}
-// 播放错误
-// error handler
-- (void)FFAVPlayerControllerDidOccurError:(FFAVPlayerController *)controller error:(NSError *)error{
-    if ([self.delegate respondsToSelector:@selector(videoPlayer:videoState:)]) {
-        [self.delegate videoPlayer:controller videoState:VIDEO_STATE_ERROR];
-    }
-    NSLog(@"video - 无法播放");
-    EVSLog(@"[*] audio player error loading fail...");
-    [EVSSystemManager exception:@"video_out" code:@"1001" message:[NSString stringWithFormat:@"video_out player %@ error loading fail"]];
-    [self syncAudioError:@"1001"];
-}
 #else
    
 #endif

@@ -53,26 +53,29 @@
  *  同步状态
  */
 -(void) stateSync{
-    dispatch_queue_t queue =  dispatch_queue_create("system.state_sync", DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
+//    dispatch_queue_t queue =  dispatch_queue_create("system.state_sync", DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
         //同步状态
         EVSSystemStateSync *systemStateSync = [[EVSSystemStateSync alloc] init];
         NSDictionary *dict = [systemStateSync getJSON];
         [[EVSWebscoketManager shareInstance] sendDict:dict];
         self.second = 0.0f;
-    });
+//    });
 }
 
 -(void)volumeChanged:(NSNotification *)notification{
-    float volume = [[[notification userInfo] objectForKey:@"AVSystemController_AudioVolumeNotificationParameter"] floatValue];
-    NSInteger systemVolume = volume * 100;
-    if (systemVolume > 0 && !self.isFirstOpen){
-        NSLog(@"EVS-系统音量:%f", systemVolume);
-        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
-        [[EVSSqliteManager shareInstance] update:@{@"speaker_volume":@(systemVolume)} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-        [self stateSync];
-    }
-    self.isFirstOpen = NO;
+//    dispatch_queue_t queue =  dispatch_queue_create("system.state_sync", DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
+        float volume = [[[notification userInfo] objectForKey:@"AVSystemController_AudioVolumeNotificationParameter"] floatValue];
+        NSInteger systemVolume = volume * 100;
+        if (systemVolume > 0 && !self.isFirstOpen){
+            NSLog(@"EVS-系统音量:%f", systemVolume);
+            NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+            [[EVSSqliteManager shareInstance] update:@{@"speaker_volume":@(systemVolume)} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+            [self stateSync];
+        }
+        self.isFirstOpen = NO;
+//    });
 }
 
 /**
@@ -103,7 +106,7 @@
 
 //检查是否静音
 -(void) checkMute{
-    [[EVSApplication shareInstance] checkMuted];
+//    [[EVSApplication shareInstance] checkMuted];
 }
 
 //检查云端时间，若2分钟没收到指令，则重新连接websocket

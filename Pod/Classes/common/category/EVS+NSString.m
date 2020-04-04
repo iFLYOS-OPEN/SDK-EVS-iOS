@@ -70,6 +70,16 @@
     return NO;
 }
 
+/**
+*  判断是否接口返回的无标识请求ID类型
+*/
+-(BOOL) isAPIRequestIdType{
+    if (![self containsString:@"manual"] && ![self containsString:@"auto"]) {
+        return YES;
+    }
+    return NO;
+}
+
 //根据reqeuestId获取时间戳
 -(NSString *) getRequestIdTimestamp{
     NSArray * array = [self componentsSeparatedByString:@"_"];
@@ -78,6 +88,13 @@
         oldTimestamp = array[1];
     }
     return oldTimestamp;
+}
+
+//获取根目录tmp/audio路径
++(NSString *) getDocumentAudioPath{
+    NSString *pathDocuments = NSTemporaryDirectory();
+    NSString *audioPath = [NSString stringWithFormat:@"%@/audio", pathDocuments];
+    return audioPath;
 }
 
 /**

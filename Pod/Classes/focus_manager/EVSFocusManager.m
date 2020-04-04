@@ -63,13 +63,14 @@
 /**********************************请求处理****************************************/
 //添加请求到队列
 -(void) addQueue:(EVSResponseModel *) newModel{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
+//    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
         @synchronized (self) {
             NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
             if (deviceId) {
                 [[EVSSqliteManager shareInstance] update:@{@"reply_key":@""} device_id:deviceId tableName:CONTEXT_TABLE_NAME];//清理追问key
-                if ([newModel.iflyos_meta.request_id isActiveRequestIdType]) {
+                if ([newModel.iflyos_meta.request_id isActiveRequestIdType] ||
+                    [newModel.iflyos_meta.request_id isAPIRequestIdType]) {
                     //判断是否主动发起的request
                     NSDictionary *contextDict = [[EVSSqliteManager shareInstance] asynQueryContext:deviceId tableName:CONTEXT_TABLE_NAME];
                     if (contextDict) {
@@ -82,6 +83,13 @@
                             }
                             [self excute];//开始执行
 
+                        }else if([newModel.iflyos_meta.request_id isAPIRequestIdType]){
+                            //特殊处理无标识符的requestId
+                            [self clearQueueAndCommandQueue];
+                            for (EVSResponseItemModel *payloadItem in newModel.iflyos_responses) {
+                                [self.queue addObject:payloadItem];
+                            }
+                            [self excute];//开始执行
                         }
                     }
                 }else{
@@ -90,7 +98,7 @@
                 }
             }
         }
-    });
+//    });
 }
 
 //处理非maunl的请求
@@ -249,8 +257,8 @@
 //执行指令（需要判断是否阻塞）
 -(void) excuteCommand:(EVSResponseItemModel *) payloadItem{
     @synchronized (self) {
-        dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-        dispatch_async(queue, ^{
+//        dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
+//        dispatch_async(queue, ^{
             if (payloadItem) {
                 //判断是否音频资源指令audio_player.audio_out（PLAYBACK & TTS & RING）
                 if(([payloadItem.header.name containsString:audio_player_audio_out] ||
@@ -342,6 +350,7 @@
                         //移除指令
                         [self removeQueue:payloadItem];
                         [[AudioInput sharedAudioManager] stop];
+//                        [self.output resume];
                     }else if ([payloadItem.header.name isEqualToString:video_player_video_out]){
                         EVSLog(@"****************** video_player.video_out ******************");
                         //操作
@@ -380,7 +389,7 @@
                                 NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
                                 NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
                                 if ([control isEqualToString:@"PAUSE"]) {
-                                    [[EVSApplication shareInstance] setEVSSessionState:FINISHED];
+                                    [[EVSApplication shareInstance] setEVSSessionState:MEDIA_STOP];
                                     if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
                                         [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
                                     }
@@ -452,21 +461,60 @@
                             NSString *reply_key = payloadItem.payload.reply_key;
                             if (reply_key && ![reply_key isEqualToString:@""]) {
                                 [[EvsSDKForiOS shareInstance] tap];
+                                if ([EVSApplication isOpenA2DPAndBluetoothHFP]) {
+//                                    [NSThread detachNewThreadWithBlock:^{
+                                        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions: AVAudioSessionCategoryOptionAllowBluetoothA2DP error:nil];
+                                        [[AVAudioSession sharedInstance] setActive:YES error:nil];
+//                                    }];
+                                }
                             }
                         }
+                    }else if ([payloadItem.header.name isEqualToString:app_action_check]) {
+                        EVSLog(@"****************** app_action.check ******************");
+                        NSString *check_id = payloadItem.payload.check_id;
+                        NSArray *actions = payloadItem.payload.actions;
+                        NSMutableArray *actionsArray = [[NSMutableArray alloc] init];
+                        if (actions) {
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                for (EVSResponsePayloadAppActionModel *appAction in actions) {
+                                    EVSAppActionCheckResultRequestPayloadActions *appActionCheckResult = [[EVSAppActionCheckResultRequestPayloadActions alloc] init];
+                                    appActionCheckResult.action_id = appAction.action_id;
+                                    
+                                        NSString *uri = [appAction.data.uri stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+                                        NSURL *url = [NSURL URLWithString:uri];
+                                        if ([[UIApplication sharedApplication] canOpenURL:url]) {
+                                            appActionCheckResult.result = YES;
+                                        }else{
+                                            appActionCheckResult.result = NO;
+                                        }
+                                     
+                                    [actionsArray addObject:appActionCheckResult];
+                                }
+                                EVSAppActionCheckResult *appActionCheckResult = [[EVSAppActionCheckResult alloc] init];
+                                appActionCheckResult.iflyos_request.payload.check_id = check_id;
+                                appActionCheckResult.iflyos_request.payload.actions = [actionsArray copy];
+                                NSDictionary *dict = [appActionCheckResult getJSON];
+                                [[EVSWebscoketManager shareInstance] sendDict:dict];
+                            });
+                        }
+                        
                     }else if([payloadItem.header.name isEqualToString:app_action_check_excute]){
                         EVSLog(@"****************** app_action.excute ******************");
                         NSArray *actions = payloadItem.payload.actions;
                         
                         if (actions) {
                             dispatch_async(dispatch_get_main_queue(), ^{
+                                BOOL foundApp = NO;//是否存存在App
+                                __block BOOL supportApp = NO;//是否支持打开App
+                                NSString *notFoundActionId;
+                                NSString *notFoundExcutionId;
                                 for (EVSResponsePayloadAppActionModel *appAction in actions) {
                                     NSString *excution_id = appAction.execution_id;
                                     NSString *action_id = appAction.action_id;
                                     NSString *uri = [appAction.data.uri stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
                                     NSURL *url = [NSURL URLWithString:uri];
                                     if ([[UIApplication sharedApplication] canOpenURL:url]) {
-
+                                        foundApp = YES;
                                         if(@available(iOS 10.0, *)) {
                                         //ios10及以后
                                             [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
@@ -476,7 +524,7 @@
                                                     appActionSuccess.iflyos_request.payload.action_id = action_id;
                                                     NSDictionary *dict = [appActionSuccess getJSON];
                                                     [[EVSWebscoketManager shareInstance] sendDict:dict];
-                                                    
+                                                    supportApp = YES;
                                                 }else{
                                                     //失败
                                                     EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
@@ -496,6 +544,7 @@
                                                 appActionSuccess.iflyos_request.payload.action_id = action_id;
                                                 NSDictionary *dict = [appActionSuccess getJSON];
                                                 [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                                supportApp = YES;
                                             }else{
                                                 //失败
                                                 EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
@@ -506,16 +555,24 @@
                                                 [[EVSWebscoketManager shareInstance] sendDict:dict];
                                             }
                                         }
-                                        
+                                        if (supportApp) {
+                                            break;
+                                        }
                                     }else{
-                                        EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
-                                        appActionFail.iflyos_request.payload.action_id = action_id;
-                                        appActionFail.iflyos_request.payload.execution_id = excution_id;
-                                        appActionFail.iflyos_request.payload.failure_code = @"APP_NOT_FOUND";
-                                        
-                                        NSDictionary *dict = [appActionFail getJSON];
-                                        [[EVSWebscoketManager shareInstance] sendDict:dict];
+                                        //找不到
+                                        notFoundActionId = action_id;
+                                        notFoundExcutionId = excution_id;
                                     }
+                                }
+                                
+                                if (!foundApp){
+                                    EVSAppActionExcuteFailed *appActionFail = [[EVSAppActionExcuteFailed alloc] init];
+                                    appActionFail.iflyos_request.payload.action_id = notFoundActionId;
+                                    appActionFail.iflyos_request.payload.execution_id = notFoundExcutionId;
+                                    appActionFail.iflyos_request.payload.failure_code = @"APP_NOT_FOUND";
+                                    
+                                    NSDictionary *dict = [appActionFail getJSON];
+                                    [[EVSWebscoketManager shareInstance] sendDict:dict];
                                 }
                             });
                         }
@@ -526,7 +583,7 @@
                     [self excute];
                 }
             }
-        });
+//        });
     }
 }
 

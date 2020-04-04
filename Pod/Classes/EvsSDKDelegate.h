@@ -89,4 +89,10 @@ typedef NS_ENUM(NSInteger, EVSSessionState) {
  *  sessionStatus : 对话状态
  */
 -(void) evs:(EvsSDKForiOS *) evsSDK sessionStatus:(EVSSessionState) sessionStatus;
+
+/**
+ *  EVS当前播放器缓冲状态
+ *  buffingFinish :  缓冲是否完成
+ */
+-(void) evs:(EvsSDKForiOS *) evsSDK buffingFinish:(BOOL) buffingFinish;
 @end

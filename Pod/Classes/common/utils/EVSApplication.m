@@ -51,6 +51,19 @@ static void PlaySoundCompletionBlock(SystemSoundID SSID, void *clientData) {
     return currentState;
 }
 
++ (BOOL)isOpenA2DPAndBluetoothHFP
+{
+    AVAudioSession* audioSession = [AVAudioSession sharedInstance];
+    AVAudioSessionRouteDescription* currentRoute = audioSession.currentRoute;
+    for (AVAudioSessionPortDescription* outputPort in currentRoute.outputs){
+        if([outputPort.portType isEqualToString:@"BluetoothHFP"] ||
+           [outputPort.portType isEqualToString:@"BluetoothA2DPOutput"]){
+            return YES;
+        }
+    }
+    return NO;
+}
+
 //获取到当前所在的视图
 + (UIViewController *)presentingVC{
     UIWindow * window = [[UIApplication sharedApplication] keyWindow];
@@ -228,7 +241,7 @@ static void soundCompletionCallback (SystemSoundID mySSID, void* myself) {
     }else if(currentState == SPEAKING && changeState == MEDIA_START){
         return SPEAKING;
     }else if(currentState == SPEAKING && changeState == MEDIA_STOP){
-        return SPEAKING;
+        return MEDIA_STOP;
     }else if(currentState == THINKING && changeState == IDLE){
         return IDLE;
     }else if(currentState == THINKING && changeState == SPEAKING){

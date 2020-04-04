@@ -158,4 +158,9 @@
  *  获取authorization
  */
 -(NSString *) getAuthorization;
+
+/**
+ *  后台播放
+ */
+-(void) playBackgroud;
 @end

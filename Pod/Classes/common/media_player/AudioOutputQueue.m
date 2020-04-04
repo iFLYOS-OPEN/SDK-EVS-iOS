@@ -87,13 +87,13 @@
  *  播放TTS队列
  */
 -(void) playTTSQueue{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
+//    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
         AudioOutputModel *model = self.ttsQueue.firstObject;
         if (model){
             [self playNext:model];
         }
-    });
+//    });
 }
 
 /**
@@ -140,8 +140,8 @@
  */
 -(void) updateAudioQueue:(AudioOutputModel *)newModel{
     @synchronized (self) {
-        dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-        dispatch_async(queue, ^{
+//        dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
+//        dispatch_async(queue, ^{
             if (self.queue) {
                 NSMutableArray *tmpQueue = [[NSMutableArray alloc] init];
                 for (AudioOutputModel *oldModel in self.queue) {
@@ -152,7 +152,7 @@
                 }
                 self.queue = tmpQueue;
             }
-        });
+//        });
     }
 }
 
@@ -234,8 +234,8 @@
  *  newModel : 新的响应资源
  */
 -(void) process:(AudioOutputModel *) newModel{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
+//    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
         @synchronized (self) {
             AudioOutputModel *oldModel = self.queue.firstObject;
             if(oldModel){
@@ -247,7 +247,7 @@
                 [self playFirst];
             }
         }
-    });
+//    });
 }
 
 /**
@@ -257,10 +257,11 @@
         //判断播放的通道类型
     @synchronized (self) {
         if (model.focusStatus == context_channel){
-            [self.audioOutput openURLWithContextChannel:model];
-            if(model.offset > 0){
-                [self.audioOutput play:model.offset];
-            }
+//            if(model.offset > 0){
+//                [self.audioOutput resume];
+//            }else{
+                [self.audioOutput openURLWithContextChannel:model];
+//            }
         }else if (model.focusStatus == tts_channel){
             [self.audioOutput openURLWithTTSChannel:model];
         }else{
@@ -385,7 +386,7 @@
         }
         if (self.queue.count == 0) {
             [self.audioOutput stop];
-            [audioOutDict setObject:playback_state_idle forKey:@"playback_state"];
+//            [audioOutDict setObject:playback_state_idle forKey:@"playback_state"];
             [audioOutDict setObject:@"" forKey:@"playback_resource_id"];
             [audioOutDict setObject:@(0) forKey:@"playback_offset"];
             [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];

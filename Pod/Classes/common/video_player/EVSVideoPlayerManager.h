@@ -26,6 +26,12 @@ typedef NS_ENUM(NSInteger, EVSVideoPlayerState) {
  *  单例
  */
 +(instancetype) shareInstance;
+
+//进入后台
+-(void) enterBackground;
+//进入前台
+-(void) becomeActive;
+
 //创建视频窗口
 -(void) createVideoPlayer:(UIView *) view frame:(CGRect) frame url:(NSString *) url offset:(long) offset resource_id:(NSString *) resource_id;
 //播放(新资源)

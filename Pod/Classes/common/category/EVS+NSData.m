@@ -46,4 +46,24 @@
     NSString *receiveStr = [[NSString alloc]initWithData:self encoding:NSUTF8StringEncoding];
     return receiveStr;
 }
+
+-(BOOL)saveAudioFile:(NSString *) fileName{
+    NSString *audioPath = [NSString getDocumentAudioPath];
+    NSString *filePath = [NSString stringWithFormat:@"%@/%@.mp3", audioPath,[fileName stringByDeletingPathExtension]];
+    BOOL isDir = TRUE;
+    BOOL isDirExist = [[NSFileManager defaultManager] fileExistsAtPath:audioPath isDirectory:&isDir];
+    if(!(isDirExist))
+    {
+        [[NSFileManager defaultManager] createDirectoryAtPath:audioPath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    
+    BOOL isSuccess = [self writeToFile:filePath atomically:YES];
+    if (isSuccess) {
+        return YES;
+    }
+    else{
+        return NO;
+    }
+}
+
 @end

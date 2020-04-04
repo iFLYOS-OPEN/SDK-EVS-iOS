@@ -94,10 +94,11 @@ static OSStatus RecordCallback(void *inRefCon,
     }
     //写入音频输入
     if(audioInput.openAudioInputStream){
+//        NSLog(@"开始录音2.4 - %@",[NSThread currentThread]);
 //        NSLog(@"[-]audioinput.stream------");
         //写入音频分贝数据
-        NSString *pcmPath = [audioInput pcmPath];
-        [audioInput writeBytes:byte len:buffer.mDataByteSize toPath:pcmPath];
+//        NSString *pcmPath = [audioInput pcmPath];
+//        [audioInput writeBytes:byte len:buffer.mDataByteSize toPath:pcmPath];
         
         //发送服务器
         NSData *data = [NSData dataWithBytes:buffer.mData length:buffer.mDataByteSize];
@@ -234,17 +235,22 @@ static OSStatus RecordCallback(void *inRefCon,
 
 //开启 Audio Unit
 - (void)start {
+    NSLog(@"开始录音2.1 - %@",[NSThread currentThread]);
     OSStatus status = AudioOutputUnitStart(audioUnit);
     checkStatus(status);
+    NSLog(@"开始录音2.2 - %@",[NSThread currentThread]);
     [[AudioOutput shareInstance] setBackgroundVolume2Percent];
+    NSLog(@"开始录音2.2.1 - %@",[NSThread currentThread]);
     self.openAudioInputStream = YES;
-    [[EVSApplication shareInstance] setEVSSessionState:LISTENING];
-    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
-    }
     NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
     if (deviceId) {
         [[EVSSqliteManager shareInstance] update:@{@"session_status":@"LISTENING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+        NSLog(@"开始录音2.2.2 - %@",[NSThread currentThread]);
+    }
+    [[EVSApplication shareInstance] setEVSSessionState:LISTENING];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+        NSLog(@"开始录音2.3 - %@",[NSThread currentThread]);
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
     }
 }
 

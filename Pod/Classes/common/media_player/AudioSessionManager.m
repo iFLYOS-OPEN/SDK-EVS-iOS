@@ -37,14 +37,21 @@
 +(void) setOnlyPlayBack{
 //    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:nil];
     AudioSessionSetActive(YES);
-    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:nil];
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:nil];
 //    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
 //    [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:nil];//设置为公放模式
-//    [[AVAudioSession sharedInstance] setActive:YES error:nil];//本App独占音频通道
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];//本App独占音频通道
 }
 
 // 只能播放当前App的声音，其他app的声音会停止，当锁屏或按静音时停止。
 +(void) setOnlyRecord{
+    AudioSessionSetActive(YES);
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:nil];
+    [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:nil];//设置为公放模式
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];//本App独占音频通道
+}
+
++(void) setPlayBackAndRecord{
     AudioSessionSetActive(YES);
     [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:nil];
     [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:nil];//设置为公放模式

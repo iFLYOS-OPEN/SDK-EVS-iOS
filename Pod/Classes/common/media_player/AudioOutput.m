@@ -12,7 +12,7 @@
 #import "EVSRequestHeader.h"
 #import "EVSVideoPlayerManager.h"
 #define dispatch_key "audioOutput_dispatch"
-@interface AudioOutput()<AVAudioPlayerDelegate>
+@interface AudioOutput()<AVAudioPlayerDelegate,STKAudioPlayerDelegate>
 @property (nonatomic ,strong)  id timeObser;
 
 //监听进度
@@ -20,6 +20,9 @@
 
 //是否重复提交NEARLY_FINISHED
 @property (assign,atomic) BOOL nearlyFinishedSended;
+
+//重试次数
+@property (assign,nonatomic) NSInteger retryCount;
 @end
 
 @implementation AudioOutput
@@ -38,7 +41,7 @@
 -(id) init{
     if (self == [super init]) {
         //开启音频会话
-        [AudioSessionManager setOnlyRecord];
+        [AudioSessionManager setPlayBackAndRecord];
 //        AVAudioSession *session = [AVAudioSession sharedInstance];
 //        [session setCategory:AVAudioSessionCategoryPlayback error:nil];
         //应用开启远程控制后,才会自动切歌,既可以实现后台运行 & 支持线控
@@ -47,6 +50,15 @@
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(interruptHandleAction:) name:AVAudioSessionInterruptionNotification object:nil];
     }
     return self;
+}
+
+-(STKAudioPlayer *) ttsPlayer{
+    STKAudioPlayerOptions options = {.enableVolumeMixer = YES};
+    if (!_ttsPlayer) {
+        _ttsPlayer = [[STKAudioPlayer alloc] initWithOptions:options];
+        _ttsPlayer.delegate = self;
+    }
+    return _ttsPlayer;
 }
 
 //播放打断事件处理
@@ -73,9 +85,6 @@
  *  播放本地资源（在音效通道播放）
  */
 -(void) openURLWithSoundEffectsChannel:(AudioOutputModel *) model{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-   
-     dispatch_async(queue, ^{
         if (model) {
             NSString *path = [[NSBundle mainBundle] pathForResource:model.localFileName ofType:model.localFileType];
             if (path) {
@@ -98,159 +107,177 @@
                 }
             }
         }
-    });
 }
 /**
  *  播放网络资源（在内容通道播放）
  */
 -(void) openURLWithContextChannel:(AudioOutputModel *) model{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
         if([model.type isEqualToString:@"video"]){
-            self.nearlyFinishedSended = NO;
-             self.contextModel = model;
-            //视频
-            if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(open:offset:resource_id:)]) {
-                [[EVSVideoPlayerManager shareInstance].delegate open:model.url offset:model.offset resource_id:model.resource_id];
-            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self clearContextChannel];
+                self.nearlyFinishedSended = NO;
+                 self.contextModel = model;
+                //视频
+                if ([[EVSVideoPlayerManager shareInstance].delegate respondsToSelector:@selector(open:offset:resource_id:)]) {
+                    [[EVSVideoPlayerManager shareInstance].delegate open:model.url offset:model.offset resource_id:model.resource_id];
+                }
+            });
         }else{
-            [self clearContextChannel];
-            self.nearlyFinishedSended = NO;
-            if (model) {
-                self.contextModel = model;
-
-                if (model.url) {
-                    NSURL *urlObj = [NSURL URLWithString:model.url];
-                    if (urlObj){
-                        //开始播放
-                        NSTimeInterval offset = (self.contextModel.offset / TIME_ZOOM);
-                        [self openContextPlayer:urlObj];
-                        self.player.volume = self.currentVolume;
-                        [self.player seekToTime:CMTimeMake(offset, 1)];
-                         [self.player play];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self clearContextChannel];
+                self.nearlyFinishedSended = NO;
+                if (model) {
+                    self.contextModel = model;
+                    [self.delegate audioOutputContextChannelStart:self model:self.contextModel];
+                    if (model.url) {
+                            NSURL *urlObj = [NSURL URLWithString:model.url];
+                            if (urlObj){
+                                NSTimeInterval offset = (self.contextModel.offset / TIME_ZOOM);
+                                //开始播放
+                                if([[model.url pathExtension] isEqualToString:@"wav"]){
+                                    //wav格式转MP3
+                                    EVSLog(@"play SoundEffects Channel >>> %@.%@",model.localFileName,model.localFileType);
+                                    //开始播放
+                                    
+                                    NSURL *reqUrlObj = [NSURL URLWithString:model.url];
+                                    NSURLRequest *req = [[NSURLRequest alloc] initWithURL:reqUrlObj];
+                                    NSData *reqData = [NSURLConnection sendSynchronousRequest:req returningResponse:nil error:nil];
+                                    NSString *fileName = [model.url lastPathComponent];
+                                    
+                                    BOOL isSave = [reqData saveAudioFile:fileName];
+                                    if (isSave) {
+                                        NSString *audioPath = [NSString getDocumentAudioPath];
+                                        NSString *filePath = [NSString stringWithFormat:@"%@/%@.mp3", audioPath,[fileName stringByDeletingPathExtension]];
+                                        
+                                        NSURL *fileUrlObj = [NSURL fileURLWithPath:filePath];
+                                        if (fileUrlObj){
+                                            //开始播放
+                                            [self createContextPlayer:fileUrlObj offset:offset];
+                                        }else{
+                                            //没找到音频文件
+                                            [self syncAudioError:@"1003"];
+                                            [EVSSystemManager exception:@"audio_output" code:@"1003" message:[NSString stringWithFormat:@"audio_output player url:%@ undefine",model.url]];
+                                        }
+                                    }else{
+                                        [self syncAudioError:@"1003"];
+                                        [EVSSystemManager exception:@"audio_output" code:@"1003" message:[NSString stringWithFormat:@"audio_output player url:%@ undefine",model.url]];
+                                    }
+                                }else{
+                                    [self createContextPlayer:urlObj offset:offset];
+                                }
+                            }else{
+                                //没找到音频文件
+                                [self syncAudioError:@"1003"];
+                                [EVSSystemManager exception:@"audio_output" code:@"1003" message:[NSString stringWithFormat:@"audio_output player url:%@ undefine",model.url]];
+                            }
                     }else{
                         //没找到音频文件
                         [self syncAudioError:@"1003"];
                         [EVSSystemManager exception:@"audio_output" code:@"1003" message:[NSString stringWithFormat:@"audio_output player url:%@ undefine",model.url]];
                     }
-                }else{
-                    //没找到音频文件
-                    [self syncAudioError:@"1003"];
-                    [EVSSystemManager exception:@"audio_output" code:@"1003" message:[NSString stringWithFormat:@"audio_output player url:%@ undefine",model.url]];
                 }
-            }
+            });
         }
-    });
 }
+
+-(void) createContextPlayer:(NSURL *)urlObj offset:(NSTimeInterval) offset{
+//    dispatch_async(dispatch_get_main_queue(), ^{
+        __weak typeof(self) weakSelf = self;
+        AVPlayerItem *item = [AVPlayerItem playerItemWithURL:urlObj];
+        self.contextPlayer = [AVPlayer playerWithPlayerItem:item];
+        self.contextPlayer.volume = self.currentVolume;
+        [self.contextPlayer play];
+        if (self.contextPlayer.currentItem) {
+            [self.contextPlayer.currentItem addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:@"context.player"];
+            [self.contextPlayer.currentItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:@"context.player"];
+            if (offset > 0 ) {
+                [self.contextPlayer.currentItem seekToTime:CMTimeMake(offset, 1) completionHandler:^(BOOL finished) {}];
+            }
+            [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification object:self.contextPlayer.currentItem queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification * _Nonnull note) {
+                [weakSelf contextPlayFinished:note];
+            }];
+        }
+
+        [self startTimer];
+//    });
+}
+
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSString *,id> *)change context:(void *)context {
+
+    NSString *playerName = (__bridge NSString *)(context);
+    NSTimeInterval duration = 0 ;
+    if ([keyPath isEqualToString:@"loadedTimeRanges"] && [playerName isEqualToString:@"context.player"]) {
+        
+        NSArray * timeRanges = self.contextPlayer.currentItem.loadedTimeRanges;
+        //本次缓冲的时间范围
+        CMTimeRange timeRange = [timeRanges.firstObject CMTimeRangeValue];
+        //缓冲总长度
+        NSTimeInterval totalLoadTime = CMTimeGetSeconds(timeRange.start) + CMTimeGetSeconds(timeRange.duration);
+        //音乐的总时间
+        duration = CMTimeGetSeconds(self.contextPlayer.currentItem.duration);
+        //计算缓冲百分比例
+        NSTimeInterval scale = totalLoadTime/duration;
+        
+        //回调进度
+        NSLog(@"context.player::loadedTimeRanges:: buff size :%f",scale);
+    }
+
+    /*****************************华丽的分割线*************************************/
+    if ([keyPath isEqualToString:@"status"]) {
+        switch (self.contextPlayer.status) {
+            case AVPlayerStatusUnknown:
+                NSLog(@"KVO：未知状态，此时不能播放");
+                break;
+            case AVPlayerStatusReadyToPlay:
+                NSLog(@"KVO：准备完毕，可以播放");
+            {
+                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:buffingFinish:)]) {
+                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] buffingFinish:NO];
+                }
+                NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+                 if (deviceId) {
+                     [[EVSSqliteManager shareInstance] update:@{@"session_status":@"SPEAKING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+                 }
+                [[EVSApplication shareInstance] setEVSSessionState:SPEAKING];
+                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+                }
+                
+                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)] && !isnan(duration)) {
+                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:0 total:duration*TIME_ZOOM];
+                }
+                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
+                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:0];
+                }
+                       
+                [self startTimer];
+            }
+                break;
+            case AVPlayerStatusFailed:
+                NSLog(@"KVO：加载失败，网络或者服务器出现问题");
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 /**
  *  播放网络资源（在TTS通道播放，分阻塞和非阻塞）
  */
 -(void) openURLWithTTSChannel:(AudioOutputModel *) model{
     if (model) {
-        dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-        
-        dispatch_async(queue, ^{
             [self clearTTSChannel];
             self.ttsModel = model;
             NSURL *urlObj = [NSURL URLWithString:model.url];
             if (urlObj) {
-                [self openTTSPlayer:urlObj];
-                self.ttsChannelPlayer.volume = self.currentTTSVolume;
-                [self.ttsChannelPlayer play];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    self.ttsPlayer.volume = self.currentTTSVolume;
+                    [self.ttsPlayer playURL:urlObj];
+                });
             }
-        });
     }
-}
-
--(void) openTTSPlayer:(NSURL *) url{
-    AVAsset*liveAsset = [AVURLAsset URLAssetWithURL:url options:nil];
-    AVPlayerItem*playerItem = [AVPlayerItem playerItemWithAsset:liveAsset];
-    self.ttsChannelPlayer = [AVPlayer playerWithPlayerItem:playerItem];
-    [self.ttsChannelPlayer.currentItem addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:@"tts.player"];
-    [self.ttsChannelPlayer.currentItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:@"tts.player"];
-//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(ttsPlayFinished:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.ttsChannelPlayer.currentItem];
-    __weak typeof(self) weakSelf = self;
-    [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification object:self.ttsChannelPlayer.currentItem queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        [weakSelf ttsPlayFinished:note];
-    }];
-}
-
--(void) openContextPlayer:(NSURL *) url{
-    AVAsset*liveAsset = [AVURLAsset URLAssetWithURL:url options:nil];
-    AVPlayerItem*playerItem = [AVPlayerItem playerItemWithAsset:liveAsset];
-    self.player = [AVPlayer playerWithPlayerItem:playerItem];
-//    if([[url.absoluteString pathExtension] isEqualToString:@"m3u8"] || [[url.absoluteString pathExtension] isEqualToString:@"M3U8"]){
-//        self.player.automaticallyWaitsToMinimizeStalling = YES;
-//    }else{
-//        self.player.automaticallyWaitsToMinimizeStalling = NO;
-//    }
-    [self.player.currentItem addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:@"context.player"];
-    [self.player.currentItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:@"context.player"];
-//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contextPlayFinished:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
-    
-    __weak typeof(self) weakSelf = self;
-    [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        [weakSelf contextPlayFinished:note];
-    }];
-    
-    
-    self.timeObser = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1.0, 1.0) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
-        //当前播放的时间
-        float current = CMTimeGetSeconds(time) * TIME_ZOOM;
-        //总时间
-        float total = CMTimeGetSeconds(playerItem.duration) * TIME_ZOOM;
-        
-        //同步播放状态
-        NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
-        NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
-        [audioOutDict setObject:@(current) forKey:@"playback_offset"];
-        [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-        
-        if (current && !isnan(total)) {
-            float progress = current / total;
-            //更新播放进度条
-            if (!isnan(progress)) {
-//                EVSLog(@"--context player 1 >>> %.2f / %.2f = (%.2f)",(float)current,(float)total,progress * 100);
-                long lastTime = (total - current) / TIME_ZOOM;
-                NSLog(@"剩余：%li",lastTime);
-                if (lastTime <= 10) {
-                    if ([weakSelf.contextModel.type isEqualToString:@"PLAYBACK"] && !weakSelf.nearlyFinishedSended) {
-                        //同步服务器(NEARLY_FINISHED，即将播放完)
-                        EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
-                        progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
-                        progressSync.iflyos_request.payload.resource_id = weakSelf.contextModel.resource_id;
-                        progressSync.iflyos_request.payload.offset = weakSelf.contextModel.offset;
-                        NSDictionary *progressSyncDict = [progressSync getJSON];
-                        [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
-                        weakSelf.nearlyFinishedSended = YES;
-                    }
-                }
-                //回调进度
-                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)]) {
-                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:current total:total];
-                }
-                if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
-                    [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:progress * 100];
-                }
-            }
-        }else{
-            long lastTime = current / TIME_ZOOM;
-            if (lastTime == 10) {
-                if ([weakSelf.contextModel.type isEqualToString:@"PLAYBACK"] && !weakSelf.nearlyFinishedSended) {
-                    //同步服务器(NEARLY_FINISHED，即将播放完)
-                    EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
-                    progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
-                    progressSync.iflyos_request.payload.resource_id = weakSelf.contextModel.resource_id;
-                    progressSync.iflyos_request.payload.offset = weakSelf.contextModel.offset;
-                    NSDictionary *progressSyncDict = [progressSync getJSON];
-                    [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
-                    weakSelf.nearlyFinishedSended = YES;
-                }
-            }
-//            EVSLog(@"--context player current time >>> %.2f / %.2f",(float)current,(float)total);
-        }
-    }];
- 
 }
 
 -(void) contextPlayFinished:(NSNotification *) notification{
@@ -259,12 +286,17 @@
 }
 //清除播放器通道
 -(void) clearContextChannel{
-    [self.player.currentItem removeObserver:self forKeyPath:@"status"];
-    [self.player.currentItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-//    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
-    [self.player removeTimeObserver:self.timeObser];
-    self.player = nil;
-    self.contextModel = nil;
+    if(self.contextPlayer.currentItem){
+        [self.contextPlayer.currentItem removeObserver:self forKeyPath:@"status"];
+        [self.contextPlayer.currentItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:self.contextPlayer.currentItem];
+    }
+    
+    //    [self.player removeTimeObserver:self.timeObser];
+        [self stopTimer];
+    //    self.contextPlayer.delegate = n;
+    //    self.contextPlayer = nil;
+        self.contextModel = nil;
 }
 
 -(void) ttsPlayFinished:(NSNotification *) notification{
@@ -273,77 +305,10 @@
 }
 
 -(void) clearTTSChannel{
-    [self.ttsChannelPlayer.currentItem removeObserver:self forKeyPath:@"status"];
-    [self.ttsChannelPlayer.currentItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
-//    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:self.ttsChannelPlayer.currentItem];
-    self.ttsChannelPlayer = nil;
+    self.ttsPlayer.delegate = nil;
+    self.ttsPlayer = nil;
     self.ttsModel = nil;
 }
-
--(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
-{
-    NSString *playerName = (__bridge NSString *)(context);
-    NSTimeInterval duration = 0 ;
-    if ([keyPath isEqualToString:@"loadedTimeRanges"] && [playerName isEqualToString:@"context.player"]) {
-        
-        NSArray * timeRanges = self.player.currentItem.loadedTimeRanges;
-        //本次缓冲的时间范围
-        CMTimeRange timeRange = [timeRanges.firstObject CMTimeRangeValue];
-        //缓冲总长度
-        NSTimeInterval totalLoadTime = CMTimeGetSeconds(timeRange.start) + CMTimeGetSeconds(timeRange.duration);
-        //音乐的总时间
-        duration = CMTimeGetSeconds(self.player.currentItem.duration);
-        //计算缓冲百分比例
-        NSTimeInterval scale = totalLoadTime/duration;
-        
-        //回调进度
-        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)] && !isnan(duration)) {
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:0 total:duration*TIME_ZOOM];
-        }
-        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:0];
-        }
-       
-    }
-    if ([keyPath isEqualToString:@"status"]) {
-        switch (self.player.status) {
-            case AVPlayerStatusUnknown:
-            {
-                
-            }
-                break;
-            case AVPlayerStatusReadyToPlay:
-            {
-                NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
-                if (deviceId) {
-                    [[EVSSqliteManager shareInstance] update:@{@"session_status":@"SPEAKING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-                }
-               [[EVSApplication shareInstance] setEVSSessionState:SPEAKING];
-               if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
-                   [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
-               }
-                if ([playerName isEqualToString:@"context.player"]) {
-                    [self.delegate audioOutputContextChannelStart:self model:self.contextModel];
-                }else if([playerName isEqualToString:@"tts.player"]){
-                    [self.delegate audioOutputTTSChannelStart:self model:self.ttsModel];
-                }
-            }
-                break;
-            case AVPlayerStatusFailed:
-            {
-                EVSLog(@"[*] audio player %@ error loading fail...",playerName);
-                [EVSSystemManager exception:@"audio_output" code:@"1001" message:[NSString stringWithFormat:@"audio_output player %@ error loading fail",playerName]];
-                [self syncAudioError:@"1001"];
-            }
-                break;
-                
-            default:
-                break;
-        }
-        
-    }
-}
-
 
 #pragma -----------------------------------------------操作
 //背景声音设置20%
@@ -379,64 +344,77 @@
 }
 //停止
 -(void) stop{
-    [self.player pause];
-    [self.player removeTimeObserver:self.timeObser];
-    self.player = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.contextPlayer) {
+            [self stopTimer];
+            [self.contextPlayer pause];
+            self.contextModel = nil;
+        }
+    });
+    
 }
 
 //停止（TTS播放器）
 -(void) stopTTS{
-    if (self.ttsChannelPlayer) {
-        [self.ttsChannelPlayer pause];
-        self.ttsChannelPlayer = nil;
+    if (self.ttsPlayer) {
+        [self.ttsPlayer pause];
+        self.ttsPlayer = nil;
     }
 }
 
 //暂停
 -(void)pause {
-    [self.timer invalidate];
-    self.timer = nil;
-    [self.player pause];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self stopTimer];
+        [self.contextPlayer pause];
+    });
 }
 
-//恢复（根据时间播放）
--(void) play:(NSTimeInterval) time{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        if (self.player) {
-            NSTimeInterval offset = (time / TIME_ZOOM);
-            self.player.volume = self.currentVolume;
-            [self.player seekToTime:CMTimeMake(offset, 1)];
-            [self.player play];
-            [self.delegate audioOutputContextChannelStart:self model:self.contextModel];
-            
+//本地回复
+-(void) resume{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.contextPlayer && self.contextModel) {
+            self.contextPlayer.volume = self.currentVolume;
+            [self.contextPlayer play];
+            [self startTimer];
         }
     });
+}
+
+//只是播放
+-(void) onlyPlay{
+//    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.contextPlayer && self.contextModel) {
+            self.contextPlayer.volume = self.currentVolume;
+            [self.contextPlayer pause];
+            [NSThread sleepForTimeInterval:0.1];
+            [self.contextPlayer play];
+        }
+//    });
 }
 
 //恢复(本地播放器恢复)
 -(void) resumeLocalPlay{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        if (self.player) {
-            self.player.volume = self.currentVolume;
-            [self.player play];
+     dispatch_async(dispatch_get_main_queue(), ^{
+         if (self.contextPlayer) {
+            self.contextPlayer.volume = self.currentVolume;
         }
-    });
+     });
 }
 
 //恢复（只恢复声音）
 -(void) resumeOnlyVolume{
-    if (self.player) {
-        self.player.volume = self.currentVolume;
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.contextPlayer) {
+            self.contextPlayer.volume = self.currentVolume;
+        }
+    });
 }
 //设置音量(0~1)
 -(void) setVolume:(float) volume{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        if (self.player) {
-            self.player.volume = volume;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if(self.contextPlayer){
+            self.contextPlayer.volume = volume;
         }
         self.currentVolume = volume;
     });
@@ -444,13 +422,10 @@
 
 //设置音量(0~1)
 -(void) setTTSVolume:(float) volume{
-    dispatch_queue_t queue =  dispatch_queue_create(dispatch_key, DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        if (self.ttsChannelPlayer) {
-            self.ttsChannelPlayer.volume = volume;
+        if (self.ttsPlayer) {
+            self.ttsPlayer.volume = volume;
         }
         self.currentTTSVolume = volume;
-    });
 }
 
 //同步播放器错误信息
@@ -466,69 +441,35 @@
         [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
     }
 }
-
--(void) setCurrentProgress:(float)currentProgress{
-    
-    _currentProgress = currentProgress;
-    [self.player pause];
-    NSTimeInterval offset = CMTimeGetSeconds(self.player.currentItem.duration) * currentProgress ;
-    [self.player seekToTime:CMTimeMake(offset, 1)];
-    [self.player play];
+-(void) updateProgress:(float)currentProgress{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.currentProgress = currentProgress;
+        NSTimeInterval offset = CMTimeGetSeconds(self.contextPlayer.currentItem.duration) * currentProgress ;
+        EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
+        progressSync.iflyos_request.payload.type = playback_state_paused;
+        progressSync.iflyos_request.payload.resource_id = self.contextModel.resource_id;
+        progressSync.iflyos_request.payload.offset = offset * TIME_ZOOM;
+        NSDictionary *progressSyncDict = [progressSync getJSON];
+        [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
+        if (self.contextPlayer) {
+                     [self.contextPlayer.currentItem seekToTime:CMTimeMake(offset, 1) completionHandler:^(BOOL finished) {}];
+        }
+    });
 }
-////计算播放时间
-//-(void) playerTimeAsyn{
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//        self.timer = [NSTimer scheduledTimerWithTimeInterval:0.1 repeats:YES block:^(NSTimer * _Nonnull timer) {
-//            // 当前时间
-//            long currentTime = self.player.currentTime * TIME_ZOOM;
-//            // 总时间
-//            long totalTime = self.player.duration * TIME_ZOOM;
-//
-//            //更新当前进度
-//            self.currentProgress = currentTime;
-//            self.contextModel.offset = currentTime;
-////            [[AudioOutputQueue shareInstance] updateAudioQueue:self.contextModel];
-//
-//            //同步播放状态
-//            NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
-//            NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
-//            [audioOutDict setObject:@(currentTime) forKey:@"playback_offset"];
-//            [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
-//
-//            // 计算进度
-//            float progress = (float)currentTime / (float)totalTime;
-////            NSLog(@"%.2f / %.2f = (%.2f)",(float)currentTime,(float)totalTime,progress * 100);
-//            //最后播放的时间
-//            long lastTime = (totalTime - currentTime) / TIME_ZOOM;
-//            if (lastTime == 10) {
-//                if ([self.contextModel.type isEqualToString:@"PLAYBACK"] && !self.nearlyFinishedSended) {
-//                    //同步服务器(NEARLY_FINISHED，即将播放完)
-//                    EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
-//                    progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
-//                    progressSync.iflyos_request.payload.resource_id = self.contextModel.resource_id;
-//                    progressSync.iflyos_request.payload.offset = self.contextModel.offset;
-//                    NSDictionary *progressSyncDict = [progressSync getJSON];
-//                    [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
-//                    self.nearlyFinishedSended = YES;
-//                }
-//            }
-//        }];
-//    });
-//}
 
 #pragma 回调
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
     if(flag){
-        if (player == self.player && self.contextModel){
-            [self.delegate audioOutputContextChannelFinish:self model:self.contextModel];
-            self.contextModel = nil;
-            self.player = nil;
-        }
-        if (player == self.ttsChannelPlayer && self.ttsModel) {
-            [self.delegate audioOutputTTSChannelFinish:self model:self.ttsModel];
-            self.ttsModel = nil;
-            self.ttsChannelPlayer = nil;
-        }
+//        if (player == self.player && self.contextModel){
+//            [self.delegate audioOutputContextChannelFinish:self model:self.contextModel];
+//            self.contextModel = nil;
+//            self.player = nil;
+//        }
+//        if (player == self.ttsChannelPlayer && self.ttsModel) {
+//            [self.delegate audioOutputTTSChannelFinish:self model:self.ttsModel];
+//            self.ttsModel = nil;
+//            self.ttsChannelPlayer = nil;
+//        }
         if (player == self.soundEffectsPlayer && self.soundModel) {
             [self.delegate audioOutputSoundEffectChannelFinish:self model:self.soundModel];
             self.soundModel = nil;
@@ -545,5 +486,201 @@
 -(void) videoPlayEnd{
     EVSLog(@"context channel video player [%@] finish...",self.contextModel.url);
     [self.delegate audioOutputContextChannelFinish:self model:self.contextModel];
+}
+
+-(void) startTimer{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self stopTimer];
+        __weak typeof(self) weakSelf = self;
+        self.timer = [NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
+            [weakSelf tick];
+        }];
+    });
+}
+
+-(void) stopTimer{
+    if (self.timer) {
+        [self.timer invalidate];
+        self.timer = nil;
+    }
+}
+
+
+-(void) tick{
+    if (!self.contextPlayer) {
+        return;
+    }
+    
+    //当前播放的时间
+    float current = CMTimeGetSeconds(self.contextPlayer.currentItem.currentTime) * TIME_ZOOM;
+    //总时间
+    float total = CMTimeGetSeconds(self.contextPlayer.currentItem.duration) * TIME_ZOOM;
+    //进度
+    float progress = current / total ;
+    
+    //同步播放状态
+    NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
+    NSMutableDictionary *audioOutDict = [[NSMutableDictionary alloc] init];
+    [audioOutDict setObject:@(current) forKey:@"playback_offset"];
+    [[EVSSqliteManager shareInstance] update:audioOutDict device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+    
+    if (isnan(total)) {
+        long startTime = current / TIME_ZOOM;
+        NSLog(@"开始：%li",startTime);
+        if (startTime >= 10) {
+            if ([self.contextModel.type isEqualToString:@"PLAYBACK"] && !self.nearlyFinishedSended) {
+                //同步服务器(NEARLY_FINISHED，即将播放完)
+                EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
+                progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
+                progressSync.iflyos_request.payload.resource_id = self.contextModel.resource_id;
+                progressSync.iflyos_request.payload.offset = self.contextModel.offset;
+                NSDictionary *progressSyncDict = [progressSync getJSON];
+                [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
+                self.nearlyFinishedSended = YES;
+            }
+        }
+    }else{
+        long lastTime = (total - current) / TIME_ZOOM;
+        NSLog(@"剩余：%li",lastTime);
+        if (lastTime <= 10) {
+            if ([self.contextModel.type isEqualToString:@"PLAYBACK"] && !self.nearlyFinishedSended) {
+                //同步服务器(NEARLY_FINISHED，即将播放完)
+                EVSAudioPlayerPlaybackProgressSync *progressSync = [[EVSAudioPlayerPlaybackProgressSync alloc] init];
+                progressSync.iflyos_request.payload.type = @"NEARLY_FINISHED";
+                progressSync.iflyos_request.payload.resource_id = self.contextModel.resource_id;
+                progressSync.iflyos_request.payload.offset = self.contextModel.offset;
+                NSDictionary *progressSyncDict = [progressSync getJSON];
+                [[EVSWebscoketManager shareInstance] sendDict:progressSyncDict];
+                self.nearlyFinishedSended = YES;
+            }
+        }
+    }
+    
+    //回调进度
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)]) {
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:current total:total];
+    }
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:progress * 100];
+    }
+}
+
+/*****************回调**************************/
+/// Raised when an item has started playing
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer didStartPlayingQueueItemId:(NSObject*)queueItemId{
+    NSString *playerName;
+    if (audioPlayer == self.ttsPlayer) {
+        playerName = @"ttsPlayer";
+    }
+    if(audioPlayer == self.contextPlayer){
+        playerName = @"contextPlayer";
+    }
+    NSLog(@"STKAudioPlayer::didStartPlayingQueueItemId::%@开始",playerName);
+    
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:buffingFinish:)]) {
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] buffingFinish:NO];
+    }
+    NSString *deviceId = [[EVSDeviceInfo shareInstance] getDeviceId];
+     if (deviceId) {
+         [[EVSSqliteManager shareInstance] update:@{@"session_status":@"SPEAKING"} device_id:deviceId tableName:CONTEXT_TABLE_NAME];
+     }
+    [[EVSApplication shareInstance] setEVSSessionState:SPEAKING];
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:sessionStatus:)]){
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] sessionStatus:[EVSApplication shareInstance].sessionState];
+    }
+    if (audioPlayer == self.ttsPlayer) {
+        [self.delegate audioOutputTTSChannelStart:self model:self.ttsModel];
+    }
+    if(audioPlayer == self.contextPlayer){
+        [self.delegate audioOutputContextChannelStart:self model:self.contextModel];
+        
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:current:total:)] && !isnan(audioPlayer.duration)) {
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] current:0 total:audioPlayer.duration*TIME_ZOOM];
+        }
+        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:progress:)]) {
+            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] progress:0];
+        }
+        [self startTimer];
+    }
+}
+/// Raised when an item has finished buffering (may or may not be the currently playing item)
+/// This event may be raised multiple times for the same item if seek is invoked on the player
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer didFinishBufferingSourceWithQueueItemId:(NSObject*)queueItemId{
+    NSLog(@"STKAudioPlayer::didFinishBufferingSourceWithQueueItemId::缓冲结束");
+    if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:buffingFinish:)]) {
+        [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] buffingFinish:YES];
+    }
+}
+/// Raised when the state of the player has changed
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer stateChanged:(STKAudioPlayerState)state previousState:(STKAudioPlayerState)previousState{
+    NSString *playerName;
+    if (audioPlayer == self.ttsPlayer) {
+        playerName = @"ttsPlayer";
+        if (state == STKAudioPlayerStatePlaying) {
+            NSLog(@"STKAudioPlayer::stateChanged::STKAudioPlayerStatePlaying::%@",playerName);
+            [self setBackgroundVolume2Percent];
+        }
+    }
+    if(audioPlayer == self.contextPlayer){
+        playerName = @"contextPlayer";
+        if (state == STKAudioPlayerStatePlaying){
+           NSLog(@"STKAudioPlayer::stateChanged::STKAudioPlayerStatePlaying::%@",playerName);
+        }
+    }
+    NSLog(@"STKAudioPlayer::stateChanged::%@",playerName);
+}
+/// Raised when an item has finished playing
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer didFinishPlayingQueueItemId:(NSObject*)queueItemId withReason:(STKAudioPlayerStopReason)stopReason andProgress:(double)progress andDuration:(double)duration{
+    NSString *playerName;
+    if (audioPlayer == self.ttsPlayer) {
+        playerName = @"ttsPlayer";
+    }
+    if(audioPlayer == self.contextPlayer){
+        playerName = @"contextPlayer";
+    }
+    NSLog(@"STKAudioPlayer::didFinishPlayingQueueItemId::%@结束",playerName);
+    if (audioPlayer == self.ttsPlayer && self.ttsModel) {
+        [self.delegate audioOutputTTSChannelFinish:self model:self.ttsModel];
+        self.ttsModel = nil;
+        self.ttsPlayer = nil;
+    }
+//    if (audioPlayer == self.contextPlayer && self.contextModel){
+//        [self.delegate audioOutputContextChannelFinish:self model:self.contextModel];
+//        self.contextModel = nil;
+////        self.contextPlayer = nil;
+//    }
+}
+/// Raised when an unexpected and possibly unrecoverable error has occured (usually best to recreate the STKAudioPlauyer)
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer unexpectedError:(STKAudioPlayerErrorCode)errorCode{
+    NSLog(@"STKAudioPlayer::unexpectedError::%ld",(long)errorCode);
+    NSString *playerName;
+    if (audioPlayer == self.ttsPlayer) {
+        playerName = @"ttsPlayer";
+    }
+    if(audioPlayer == self.contextPlayer){
+        playerName = @"contextPlayer";
+    }
+    EVSLog(@"[*] audio player %@ error loading fail...",playerName);
+    if (self.retryCount < 1 && self.contextModel) {
+//        [self.contextPlayer play:self.contextModel.url];
+    }
+    self.retryCount ++;
+//    [self stopTimer];
+//    [EVSSystemManager exception:@"audio_output" code:@"1001" message:[NSString stringWithFormat:@"audio_output player %@ error loading fail",playerName]];
+//    [self syncAudioError:@"1001"];
+}
+#pragma option
+/// Optionally implemented to get logging information from the STKAudioPlayer (used internally for debugging)
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer logInfo:(NSString*)line{
+//    NSLog(@" STKAudioPlayer::logInfo::%@",line);
+}
+/// Raised when items queued items are cleared (usually because of a call to play, setDataSource or stop)
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer didCancelQueuedItems:(NSArray*)queuedItems{
+    
+}
+
+/// Raised when datasource read stream metadata. Called from the non-main thread.
+-(void) audioPlayer:(STKAudioPlayer*)audioPlayer didReadStreamMetadata:(NSDictionary*)dictionary{
+    NSLog(@"STKAudioPlayer::didReadStreamMetadata::%@",dictionary);
 }
 @end

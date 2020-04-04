@@ -60,6 +60,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface EVSContextTemplateProtocolModel : EVSContextVersionProtocolModel
+@property(copy,nonatomic) NSString *template_type;
+@property(assign,nonatomic) BOOL focused;
+@property(assign,nonatomic) BOOL supported_custom_template;//新增字段，true为支持自定义模版，默认false
+@end
+
 @interface EVSContextAppActionModel : EVSContextVersionProtocolModel
 @property(copy,nonatomic) NSString *foreground_app;//当前前景运行的app的包名
 @property(copy,nonatomic) NSString *activity;//当前正在前景运行的页面名称
@@ -82,6 +88,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(strong,nonatomic) EVSPlaybackControllerProtocolModel *playback_controller;
 @property(strong,nonatomic) EVSContextAppActionModel *app_action;
 @property(strong,nonatomic) EVSContextVideoPlayerModel *video_player;
+@property(strong,nonatomic) EVSContextTemplateProtocolModel *m_template;
 //获取header json字典
 +(NSDictionary *) getJSON;
 @end

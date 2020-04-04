@@ -24,7 +24,10 @@ NS_ASSUME_NONNULL_BEGIN
  *  判断是否主动请求ID类型
  */
 -(BOOL) isActiveRequestIdType;
-
+/**
+*  判断是否接口返回的无标识请求ID类型
+*/
+-(BOOL) isAPIRequestIdType;
 /**
  *  判断是否主动请求ID类型
  */
@@ -49,8 +52,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 
-
-
+//获取根目录document/audio路径
++(NSString *) getDocumentAudioPath;
 
 
 

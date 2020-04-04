@@ -76,8 +76,6 @@
         NSString *deviceId = [EVSDeviceInfo shareInstance].getDeviceId;
         long timestamp = [NSDate getTimestamp] ;
         [[EVSSqliteManager shareInstance] update:@{@"timestamp":@(timestamp)} device_id:deviceId tableName:SYSTEM_TABLE_NAME];
-        
-        [[EVSLocationManager shareInstance] getLocation];
         [self.socket open];
     }
 }
@@ -106,24 +104,30 @@
 #pragma mark - SRWebSocketDelegate
 - (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message {
     if (webSocket == self.socket) {
-        //接收到推送的新数据message,可以是json,可以是data等
-        //信息统一处理渠道
-        EVSResponseModel *responseModel = [EVSResponseModel mj_objectWithKeyValues:message];
-        EVSLog(@"[*] response <<< %@",message);
-        if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:responseMsg:)]){
-            [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] responseMsg:message];
-        }
-        
-        if (responseModel.iflyos_responses.count > 0){
-            
-            [[EVSFocusManager shareInstance] addQueue:responseModel];
-        }
+        /* 1.创建一个串行队列 */
+          dispatch_queue_t serialQueue = dispatch_queue_create("webSocket_response", DISPATCH_QUEUE_SERIAL);
+           /* 2.将不同的任务添加到队列中 */
+           dispatch_async(serialQueue, ^{
+               //接收到推送的新数据message,可以是json,可以是data等
+               //信息统一处理渠道
+               EVSResponseModel *responseModel = [EVSResponseModel mj_objectWithKeyValues:message];
+               EVSLog(@"[*] response (%@) <<< %@",[NSThread currentThread],message);
+               if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:responseMsg:)]){
+                   [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] responseMsg:message];
+               }
+               
+               if (responseModel.iflyos_responses.count > 0){
+                   
+                   [[EVSFocusManager shareInstance] addQueue:responseModel];
+               }
+           });
     }
 }
 - (void)webSocketDidOpen:(SRWebSocket *)webSocket {
     EVSLog(@"######################## EVS State #########################");
     EVSLog(@"#                 socket connect success...                #");
     EVSLog(@"############################################################");
+    [[EVSLocationManager shareInstance] getLocation];
     EVSConnectState state = self.socket.readyState;
     if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:connectState:error:)]){
         [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] connectState:state error:nil];
@@ -169,7 +173,7 @@
  *  发送command
  */
 -(void) sendStr:(NSString *) dataStr{
-    EVSLog(@"[*] Request >>> %@",dataStr);
+    EVSLog(@"[*] Request (%@) >>> %@",[NSThread currentThread],dataStr);
     if ([[EvsSDKForiOS shareInstance].delegate respondsToSelector:@selector(evs:requestMsg:)]){
         [[EvsSDKForiOS shareInstance].delegate evs:[EvsSDKForiOS shareInstance] requestMsg:dataStr];
     }
@@ -200,7 +204,10 @@
 
 - (void)sendDict:(NSDictionary *)param {
     NSString* dataStr = [param mj_JSONString];
-    [self sendStr:dataStr];
+//    dispatch_queue_t queue = dispatch_queue_create("websocket_sendDict", DISPATCH_QUEUE_SERIAL);
+//    dispatch_async(queue, ^{
+        [self sendStr:dataStr];
+//    }) ;
 }
 
 -(void) sendData:(NSData *) data{

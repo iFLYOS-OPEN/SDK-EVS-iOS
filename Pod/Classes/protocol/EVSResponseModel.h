@@ -62,7 +62,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property(copy,nonatomic) NSString *lyric; //歌词信息
 @property(strong,nonatomic) EVSResponsePayloadMetadataModel *metadata; //元数据
 @property(strong,nonatomic) EVSResponsePayloadContentModel *content;
-@property(strong,nonatomic) EVSResponsePayloadProviderModel *provider; 
+@property(strong,nonatomic) EVSResponsePayloadProviderModel *provider;
+
+//custom_template
+@property(copy,nonatomic) NSString *template_id;
+@property(copy,nonatomic) NSString *html_source_code;
 //识别返回文本
 @property(copy,nonatomic) NSString *text; //识别的内容
 @property(assign,nonatomic) BOOL is_last; //是否最后识别
