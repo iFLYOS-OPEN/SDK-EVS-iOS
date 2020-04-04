@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
 s.name        = "SDK-EVS-iOS"
-s.version     = "1.0.8"
+s.version     = "1.1.0"
 s.authors     = { "jwzhou2" => "jwzhou2@iflytek.com" }
 s.homepage    = "https://github.com/iFLYOS-OPEN/SDK-EVS-iOS"
 s.summary     = "SDK-EVS-iOS."
@@ -10,6 +10,10 @@ s.license     = { :type => "MIT", :file => "LICENSE" }
 s.source_files  = "Pod/Classes/**/*.{h,m,mm}"
 s.frameworks = 'UIKit', 'Foundation' , 'Security','CoreLocation'
 
+s.dependency 'PLPlayerKit'
+s.dependency 'FreeStreamer'
+s.dependency 'opus-ios'
+s.dependency 'Protobuf'
 s.dependency 'FMDB'
 s.dependency 'SocketRocket'
 s.dependency 'MJExtension'
