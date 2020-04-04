@@ -51,17 +51,17 @@
     
 
     ### 依赖库
-
+    
+    pod 'PLPlayerKit', '~> 3.4.3'
+    pod 'FreeStreamer'
+    pod 'opus-ios'
+    pod "Protobuf"
     pod 'FMDB'
-
     pod 'SocketRocket'
-
     pod 'MJExtension'
-
     pod 'AFNetworking'
-
     pod 'WebViewJavascriptBridge'
-
+    pod 'KeychainItemWrapper-Copy'
     
     ```
     libc++,libstdc++.6.0.9,libz
@@ -78,7 +78,7 @@
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.0.8'
+    pod 'SDK-EVS-iOS','~> 1.1.0'
     ```
 
 
