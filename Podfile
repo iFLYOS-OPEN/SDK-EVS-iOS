@@ -6,7 +6,6 @@ use_frameworks!
 target 'EvsSDKDemo' do
     project 'EvsSDKDemo/EvsSDKDemo.xcodeproj'
     pod 'PLPlayerKit', '~> 3.4.3'
-    pod 'FreeStreamer'
     pod 'opus-ios'
     pod 'FMDB'
     pod "Protobuf"

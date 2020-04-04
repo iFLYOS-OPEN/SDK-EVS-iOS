@@ -53,7 +53,6 @@
     ### 依赖库
     
     pod 'PLPlayerKit', '~> 3.4.3'
-    pod 'FreeStreamer'
     pod 'opus-ios'
     pod "Protobuf"
     pod 'FMDB'
@@ -78,7 +77,7 @@
 
     ```
     source 'https://github.com/iFLYOS-OPEN/SDK-EVS-iOS.git'
-    pod 'SDK-EVS-iOS','~> 1.1.1'
+    pod 'SDK-EVS-iOS','~> 1.1.2'
     ```
 
 

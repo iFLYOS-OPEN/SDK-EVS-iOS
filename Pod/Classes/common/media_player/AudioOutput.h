@@ -7,7 +7,6 @@
 //  音频输出
 
 #import <UIKit/UIKit.h>
-#import <FreeStreamer/FreeStreamer-umbrella.h>
 #import <AVFoundation/AVFoundation.h>
 #import "STKAudioPlayer.h"
 #import "EVSSampleQueueId.h"

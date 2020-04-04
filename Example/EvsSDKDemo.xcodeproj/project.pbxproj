@@ -515,7 +515,7 @@
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/MJExtension/MJExtension.framework/Headers\"",
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/SocketRocket/SocketRocket.framework/Headers\"",
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/WebViewJavascriptBridge/WebViewJavascriptBridge.framework/Headers\"",
-					"\"$(SRCROOT)/EvsSDKDemo/IMAKit\"",
+					"\"$(SRCROOT)/EvsSDKDemo\"",
 				);
 				INFOPLIST_FILE = EvsSDKDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.1;
@@ -583,7 +583,7 @@
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/MJExtension/MJExtension.framework/Headers\"",
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/SocketRocket/SocketRocket.framework/Headers\"",
 					"\"${PODS_CONFIGURATION_BUILD_DIR}/WebViewJavascriptBridge/WebViewJavascriptBridge.framework/Headers\"",
-					"\"$(SRCROOT)/EvsSDKDemo/IMAKit\"",
+					"\"$(SRCROOT)/EvsSDKDemo\"",
 				);
 				INFOPLIST_FILE = EvsSDKDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.1;

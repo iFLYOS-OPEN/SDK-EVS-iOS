@@ -341,7 +341,7 @@
 -(void) imaManager:(IMAManager *) imaManager peripheral:(CBPeripheral *)peripheral isConnect:(BOOL) isConnect error:(NSError *) error{
     dispatch_async(dispatch_get_main_queue(), ^{
         [imaManager stopScan];
-        if (isActive) {
+        if (peripheral) {
             [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备【%@】连接成功...",peripheral.name]];
         }else{
             [self textLast:_textView text:[NSString stringWithFormat:@"🔵 >>> %@",@"蓝牙设备【%@】连接失败，%@...",peripheral.name,error.localizedDescription]];
