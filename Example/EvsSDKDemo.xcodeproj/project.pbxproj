@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		43B77D4572EE3CE2E8A196E0 /* Pods_EvsSDKDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3F12E800609E22B677632 /* Pods_EvsSDKDemo.framework */; };
-		8E2D5CC524386463000916C8 /* libIMAKit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E2D5CC424386463000916C8 /* libIMAKit.a */; };
+		8E2D5CCE24399B5D000916C8 /* libIMAKit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E2D5CCD24399B5C000916C8 /* libIMAKit.a */; };
 		8E367C1423011DA40010B38B /* network_error_retry.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1323011DA40010B38B /* network_error_retry.m4a */; };
 		8E367C1823011DD50010B38B /* network_error_wait.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1723011DD50010B38B /* network_error_wait.m4a */; };
 		8E367C1B23011DDD0010B38B /* power_on.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8E367C1923011DDD0010B38B /* power_on.mp3 */; };
@@ -47,9 +47,9 @@
 		26B42D55AE30DDCD885A4812 /* Pods-EvsSDKDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvsSDKDemo.release.xcconfig"; path = "Target Support Files/Pods-EvsSDKDemo/Pods-EvsSDKDemo.release.xcconfig"; sourceTree = "<group>"; };
 		37E3F12E800609E22B677632 /* Pods_EvsSDKDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_EvsSDKDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E05110A22E84F93002EF76D /* EvsSDKDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EvsSDKDemo.entitlements; sourceTree = "<group>"; };
-		8E2D5CC424386463000916C8 /* libIMAKit.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libIMAKit.a; sourceTree = "<group>"; };
-		8E2D5CC624386470000916C8 /* IMAKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAKit.h; sourceTree = "<group>"; };
-		8E2D5CC724386471000916C8 /* IMAManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAManager.h; sourceTree = "<group>"; };
+		8E2D5CCD24399B5C000916C8 /* libIMAKit.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libIMAKit.a; sourceTree = "<group>"; };
+		8E2D5CCF24399B66000916C8 /* IMAKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAKit.h; sourceTree = "<group>"; };
+		8E2D5CD024399B66000916C8 /* IMAManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IMAManager.h; sourceTree = "<group>"; };
 		8E367C1323011DA40010B38B /* network_error_retry.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = network_error_retry.m4a; sourceTree = "<group>"; };
 		8E367C1723011DD50010B38B /* network_error_wait.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = network_error_wait.m4a; sourceTree = "<group>"; };
 		8E367C1923011DDD0010B38B /* power_on.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = power_on.mp3; sourceTree = "<group>"; };
@@ -99,7 +99,7 @@
 				8E42C6E323151D7600CEA156 /* libz.tbd in Frameworks */,
 				8E42C6E123151D7100CEA156 /* libstdc++.6.0.9.tbd in Frameworks */,
 				8E80438E22E725EF0003FA93 /* libEvsSDKForiOS.a in Frameworks */,
-				8E2D5CC524386463000916C8 /* libIMAKit.a in Frameworks */,
+				8E2D5CCE24399B5D000916C8 /* libIMAKit.a in Frameworks */,
 				43B77D4572EE3CE2E8A196E0 /* Pods_EvsSDKDemo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -110,9 +110,9 @@
 		8E2D5CC3243863E0000916C8 /* IMAKit */ = {
 			isa = PBXGroup;
 			children = (
-				8E2D5CC624386470000916C8 /* IMAKit.h */,
-				8E2D5CC724386471000916C8 /* IMAManager.h */,
-				8E2D5CC424386463000916C8 /* libIMAKit.a */,
+				8E2D5CCF24399B66000916C8 /* IMAKit.h */,
+				8E2D5CD024399B66000916C8 /* IMAManager.h */,
+				8E2D5CCD24399B5C000916C8 /* libIMAKit.a */,
 			);
 			path = IMAKit;
 			sourceTree = "<group>";

@@ -9,7 +9,6 @@ target 'EvsSDKDemo' do
     pod 'opus-ios'
     pod 'FMDB'
     pod "Protobuf"
-    pod 'FMDB'
     pod 'SocketRocket'
     pod 'MJExtension'
     pod 'AFNetworking', '~> 3.2.1'

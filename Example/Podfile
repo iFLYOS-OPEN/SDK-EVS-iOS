@@ -7,6 +7,7 @@ target 'EvsSDKForiOS' do
     project 'EvsSDKForiOS/EvsSDKForiOS.xcodeproj'
     pod 'PLPlayerKit', '~> 3.4.3'
     pod 'opus-ios'
+    pod "Protobuf"
     pod 'FMDB'
     pod 'SocketRocket'
     pod 'MJExtension'
