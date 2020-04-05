@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
 s.name        = "SDK-EVS-iOS"
-s.version     = "1.1.4"
+s.version     = "1.1.5"
 s.authors     = { "jwzhou2" => "jwzhou2@iflytek.com" }
 s.homepage    = "https://github.com/iFLYOS-OPEN/SDK-EVS-iOS"
 s.summary     = "SDK-EVS-iOS."
@@ -23,6 +23,7 @@ s.dependency 'KeychainItemWrapper-Copy'
 s.pod_target_xcconfig = {
 'ONLY_ACTIVE_ARCH' => 'YES',
 'OTHER_LDFLAGS' => ['-ObjC'] ,
+'VALID_ARCHS[sdk=iphonesimulator*]' => '',
 'ENABLE_BITCODE' => 'NO'
 }
 
